@@ -14,6 +14,7 @@ interface PDFViewerProps {
   currentPage: number;
   setCurrentPage: (page: number) => void;
   viewMode: 'page' | 'scroll';
+  onScaleChange?: (scale: number) => void;
 }
 
 export default function PDFViewer({
@@ -21,6 +22,7 @@ export default function PDFViewer({
   currentPage,
   setCurrentPage,
   viewMode,
+  onScaleChange,
 }: PDFViewerProps) {
   const [numPages, setNumPages] = useState<number>(0);
   const [scale, setScale] = useState(1.2);
@@ -62,12 +64,25 @@ export default function PDFViewer({
   };
 
   const handleZoomIn = () => {
-    setScale(prev => Math.min(prev + 0.2, 3));
+    setScale(prev => {
+      const newScale = Math.min(prev + 0.2, 3);
+      onScaleChange?.(newScale);
+      return newScale;
+    });
   };
 
   const handleZoomOut = () => {
-    setScale(prev => Math.max(prev - 0.2, 0.5));
+    setScale(prev => {
+      const newScale = Math.max(prev - 0.2, 0.5);
+      onScaleChange?.(newScale);
+      return newScale;
+    });
   };
+
+  // Notify parent when scale changes
+  useEffect(() => {
+    onScaleChange?.(scale);
+  }, [scale, onScaleChange]);
 
   // Keyboard navigation
   useEffect(() => {

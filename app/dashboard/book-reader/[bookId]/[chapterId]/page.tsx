@@ -24,6 +24,7 @@ export default function ChapterReaderPage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [viewMode, setViewMode] = useState<'page' | 'scroll'>('page');
   const [contextItems, setContextItems] = useState<Array<{ text: string; page: number }>>([]);
+  const [pdfScale, setPdfScale] = useState(1.2);
 
   if (!book || !chapter) {
     return (
@@ -214,6 +215,7 @@ export default function ChapterReaderPage() {
               currentPage={currentPage}
               setCurrentPage={setCurrentPage}
               viewMode={viewMode}
+              onScaleChange={setPdfScale}
             />
           }
           rightPanel={
@@ -224,13 +226,14 @@ export default function ChapterReaderPage() {
               currentPage={currentPage}
               chapterTitle={chapter.title}
               chapterId={chapterId}
+              pdfScale={pdfScale}
               onClearContext={() => setContextItems([])}
               onAddContext={(text, page) => {
                 setContextItems(prev => [...prev, { text, page }]);
               }}
             />
           }
-          defaultLeftWidth={70}
+          defaultLeftWidth={60}
           minLeftWidth={40}
           minRightWidth={25}
           rightPanelVisible={chatOpen}

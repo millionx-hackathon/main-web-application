@@ -20,6 +20,8 @@ interface ChatSidebarProps {
   contextItems: Array<{ text: string; page: number }>;
   currentPage: number;
   chapterTitle: string;
+  chapterId?: string;
+  pdfScale?: number;
   onClearContext: () => void;
   onAddContext?: (text: string, page: number) => void;
 }
@@ -31,6 +33,7 @@ export default function ChatSidebar({
   currentPage,
   chapterTitle,
   chapterId = 'ch1',
+  pdfScale = 1.2,
   onClearContext,
   onAddContext,
 }: ChatSidebarProps) {
@@ -39,9 +42,11 @@ export default function ChatSidebar({
   const [isLoading, setIsLoading] = useState(false);
   const [contextLoading, setContextLoading] = useState(false);
   const [contextLoaded, setContextLoaded] = useState(false);
+  const [pageContextLoading, setPageContextLoading] = useState(false);
   const [suggestedQuestions, setSuggestedQuestions] = useState<string[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [lastLoadedPage, setLastLoadedPage] = useState<number | null>(null);
 
   // Listen for askAI events
   useEffect(() => {
@@ -84,6 +89,7 @@ export default function ChatSidebar({
     setMessages(prev => [...prev, aiMessage]);
 
     // Mark as complete after streaming would finish (approximate)
+    // 1000ms initial delay + text length * 30ms per word + 500ms buffer
     setTimeout(() => {
       setMessages(prev => prev.map(msg =>
         msg.id === aiMessageId
@@ -91,19 +97,19 @@ export default function ChatSidebar({
           : msg
       ));
       setIsLoading(false);
-    }, responseText.length * 30 + 500);
+    }, 1000 + responseText.length * 30 + 500);
   };
 
-  // Simulate context loading
+  // Load page context when chat opens or page changes (only if no messages exist)
   useEffect(() => {
-    if (isOpen && contextItems.length > 0 && !contextLoaded) {
-      setContextLoading(true);
-      setTimeout(() => {
-        setContextLoading(false);
-        setContextLoaded(true);
+    if (isOpen && messages.length === 0) {
+      // Only load if page changed or not loaded yet
+      if (lastLoadedPage !== currentPage) {
+        setPageContextLoading(true);
+        setSuggestedQuestions([]);
 
-        // Generate suggested questions if no messages yet - based on current page
-        if (messages.length === 0) {
+        // Simulate loading context for the page
+        setTimeout(() => {
           const pageData = getPageQuestions(chapterId, currentPage);
           if (pageData.suggestions.length > 0) {
             setSuggestedQuestions(pageData.suggestions);
@@ -115,20 +121,29 @@ export default function ChatSidebar({
               'এই বিষয়টি আরো বিস্তারিতভাবে ব্যাখ্যা করুন',
             ]);
           }
-        }
-      }, 2000);
-    }
-  }, [isOpen, contextItems, contextLoaded, messages.length, chapterTitle, chapterId, currentPage]);
-
-  // Update suggestions when page changes (if no messages)
-  useEffect(() => {
-    if (isOpen && messages.length === 0) {
-      const pageData = getPageQuestions(chapterId, currentPage);
-      if (pageData.suggestions.length > 0) {
-        setSuggestedQuestions(pageData.suggestions);
+          setPageContextLoading(false);
+          setLastLoadedPage(currentPage);
+        }, 1500); // 1.5 second loading
+      }
+    } else if (messages.length > 0) {
+      // If messages exist, don't reload questions when page changes
+      // Just update the last loaded page to prevent reloading
+      if (lastLoadedPage !== currentPage) {
+        setLastLoadedPage(currentPage);
       }
     }
-  }, [currentPage, isOpen, messages.length, chapterId]);
+  }, [isOpen, currentPage, messages.length, chapterId, chapterTitle, lastLoadedPage]);
+
+  // Simulate context loading for selected items
+  useEffect(() => {
+    if (isOpen && contextItems.length > 0 && !contextLoaded) {
+      setContextLoading(true);
+      setTimeout(() => {
+        setContextLoading(false);
+        setContextLoaded(true);
+      }, 2000);
+    }
+  }, [isOpen, contextItems, contextLoaded]);
 
   // Scroll to bottom when new messages arrive or when streaming
   useEffect(() => {
@@ -178,6 +193,7 @@ export default function ChatSidebar({
     setMessages(prev => [...prev, aiMessage]);
 
     // Mark as complete after streaming would finish
+    // 1000ms initial delay + text length * 30ms per word + 500ms buffer
     setTimeout(() => {
       setMessages(prev => prev.map(msg =>
         msg.id === aiMessageId
@@ -185,15 +201,15 @@ export default function ChatSidebar({
           : msg
       ));
       setIsLoading(false);
-    }, responseText.length * 30 + 500);
+    }, 1000 + responseText.length * 30 + 500);
   };
 
   const handleSuggestedQuestion = (question: string) => {
-    // Add context from page 10 when clicking demo questions
+    // Add context from current page when clicking suggested questions
     if (onAddContext) {
       onAddContext(
-        `পৃষ্ঠা ১০ থেকে নির্বাচিত কনটেক্সট: ${chapterTitle} অধ্যায়ের গুরুত্বপূর্ণ বিষয়বস্তু`,
-        10
+        `পৃষ্ঠা ${currentPage} থেকে নির্বাচিত কনটেক্সট: ${chapterTitle} অধ্যায়ের গুরুত্বপূর্ণ বিষয়বস্তু`,
+        currentPage
       );
     }
     setInput(question);
@@ -214,6 +230,18 @@ export default function ChatSidebar({
       handleSend();
     }
   };
+
+  // Calculate font size based on PDF scale (base 14px, scales with PDF zoom)
+  // Scale factor: 1.2 (default) = 14px, 2.0 = ~18px, 3.0 = ~20px
+  const baseFontSize = 14;
+  const minFontSize = 14;
+  const maxFontSize = 22;
+  // More responsive scaling: directly proportional to PDF zoom
+  // When PDF is at 1.2x (default), chat is 14px
+  // When PDF is at 2.0x, chat is ~18px
+  // When PDF is at 3.0x, chat is ~22px
+  const scaleRatio = pdfScale / 1.2; // Normalize to default scale
+  const chatFontSize = Math.max(minFontSize, Math.min(baseFontSize * scaleRatio, maxFontSize));
 
   return (
     <div className="h-full w-full bg-white flex flex-col" lang="bn">
@@ -272,8 +300,21 @@ export default function ChatSidebar({
         </div>
       )}
 
+      {/* Page Context Loading */}
+      {pageContextLoading && messages.length === 0 && (
+        <div className="px-4 py-4 bg-blue-50 border-b border-blue-100">
+          <div className="flex items-center gap-3">
+            <Loader2 className="w-5 h-5 animate-spin text-blue-600" />
+            <div>
+              <p className="text-sm font-semibold text-blue-700">পৃষ্ঠা {currentPage} এর কনটেক্সট লোড হচ্ছে...</p>
+              <p className="text-xs text-blue-600 mt-0.5">প্রাসঙ্গিক প্রশ্ন প্রস্তুত করা হচ্ছে</p>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Suggested Questions */}
-      {suggestedQuestions.length > 0 && messages.length === 0 && (
+      {!pageContextLoading && suggestedQuestions.length > 0 && messages.length === 0 && (
         <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100">
           <div className="flex items-center gap-2 mb-2">
             <FileQuestion className="w-4 h-4 text-indigo-600" />
@@ -284,7 +325,8 @@ export default function ChatSidebar({
               <button
                 key={idx}
                 onClick={() => handleSuggestedQuestion(question)}
-                className="w-full text-left text-sm text-indigo-700 bg-white p-2 rounded border border-indigo-200 hover:bg-indigo-50 transition-colors"
+                className="w-full text-left text-indigo-700 bg-white p-2 rounded border border-indigo-200 hover:bg-indigo-50 transition-colors bengali-text"
+                style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.5' }}
               >
                 {question}
               </button>
@@ -319,9 +361,10 @@ export default function ChatSidebar({
                   ));
                   setIsLoading(false);
                   setSuggestedQuestions([]);
-                }, quizResponseText.length * 30 + 500);
+                }, 1000 + quizResponseText.length * 30 + 500);
               }}
-              className="w-full text-left text-sm font-semibold text-indigo-700 bg-indigo-100 p-2 rounded border border-indigo-300 hover:bg-indigo-200 transition-colors flex items-center gap-2"
+              className="w-full text-left font-semibold text-indigo-700 bg-indigo-100 p-2 rounded border border-indigo-300 hover:bg-indigo-200 transition-colors flex items-center gap-2 bengali-text"
+              style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.5' }}
             >
               <FileQuestion className="w-4 h-4" />
               এই পৃষ্ঠার জন্য কুইজ তৈরি করুন
@@ -345,14 +388,14 @@ export default function ChatSidebar({
               }`}
             >
               {message.isStreaming ? (
-                <p className="text-sm whitespace-pre-wrap">
+                <p className="whitespace-pre-wrap bengali-text" lang="bn" style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.6' }}>
                   <StreamingMessage
                     content={message.content}
                     isStreaming={true}
                   />
                 </p>
               ) : (
-                <p className="text-sm whitespace-pre-wrap bengali-text" lang="bn">{message.content}</p>
+                <p className="whitespace-pre-wrap bengali-text" lang="bn" style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.6' }}>{message.content}</p>
               )}
 
               {/* Quotes */}
@@ -361,9 +404,10 @@ export default function ChatSidebar({
                   {message.quotes.map((quote, idx) => (
                     <div
                       key={idx}
-                      className="bg-white/20 p-2 rounded border-l-2 border-white/40 text-xs"
+                      className="bg-white/20 p-2 rounded border-l-2 border-white/40 bengali-text"
+                      style={{ fontSize: `${chatFontSize * 0.85}px`, lineHeight: '1.5' }}
                     >
-                      <span className="font-medium bengali-text" lang="bn">পৃষ্ঠা {quote.page}:</span> <span className="bengali-text" lang="bn">{quote.text.replace(/undefined/g, '').trim()}</span>
+                      <span className="font-medium" lang="bn">পৃষ্ঠা {quote.page}:</span> <span lang="bn">{quote.text.replace(/undefined/g, '').trim()}</span>
                     </div>
                   ))}
                 </div>
@@ -410,7 +454,8 @@ export default function ChatSidebar({
             onChange={(e) => setInput(e.target.value)}
             onKeyPress={handleKeyPress}
             placeholder="কোনো প্রশ্ন করুন..."
-            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            className="flex-1 resize-none border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent bengali-text"
+            style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.6' }}
             rows={2}
           />
           <button
@@ -439,18 +484,101 @@ function generateMockResponse(
     return generateMockQuiz(currentPage);
   }
 
-  // Check if there's a page-specific answer
-  const pageData = getPageQuestions(chapterId, currentPage);
-  const matchingQuestion = pageData.questions.find(q =>
-    question.toLowerCase().includes(q.question.toLowerCase().substring(0, 10)) ||
-    q.question.toLowerCase().includes(question.toLowerCase().substring(0, 10))
-  );
+  // Check if there's a page-specific answer - search all pages 1-10
+  let matchingQuestion: PageQuestion | undefined;
 
-  if (matchingQuestion) {
-    return matchingQuestion.answer;
+  // First, check if question matches any suggestion exactly (for suggested questions)
+  for (let page = 1; page <= 10; page++) {
+    const pageData = getPageQuestions(chapterId, page);
+    const matchingSuggestion = pageData.suggestions.find(s => {
+      const sLower = s.trim().toLowerCase();
+      const questionLower = question.trim().toLowerCase();
+      // Exact match or very close match
+      return sLower === questionLower ||
+             (sLower.length > 10 && questionLower.includes(sLower.substring(0, Math.min(20, sLower.length)))) ||
+             (questionLower.length > 10 && sLower.includes(questionLower.substring(0, Math.min(20, questionLower.length))));
+    });
+
+    if (matchingSuggestion) {
+      // Try to find corresponding question - check if any question matches key concepts
+      const suggestionKeywords = matchingSuggestion.toLowerCase()
+        .split(/[\s,।?]/)
+        .filter(w => w.length > 2);
+
+      matchingQuestion = pageData.questions.find(q => {
+        const qLower = q.question.toLowerCase();
+        // Check if question contains significant keywords from suggestion
+        const matchingKeywords = suggestionKeywords.filter(keyword => qLower.includes(keyword));
+        return matchingKeywords.length >= Math.min(2, suggestionKeywords.length / 2);
+      });
+
+      // If no match found, use first question from that page
+      if (!matchingQuestion && pageData.questions.length > 0) {
+        matchingQuestion = pageData.questions[0];
+      }
+
+      if (matchingQuestion) break;
+    }
   }
 
-  // Generate independent explanations based on question type
+  // If not found via suggestions, check current page questions
+  if (!matchingQuestion) {
+    const currentPageData = getPageQuestions(chapterId, currentPage);
+    matchingQuestion = currentPageData.questions.find(q => {
+      const qLower = q.question.trim().toLowerCase();
+      const questionLower = question.trim().toLowerCase();
+      // Check if question matches exactly or contains key phrases
+      return qLower === questionLower ||
+             (qLower.length > 10 && questionLower.includes(qLower.substring(0, Math.min(15, qLower.length)))) ||
+             (questionLower.length > 10 && qLower.includes(questionLower.substring(0, Math.min(15, questionLower.length))));
+    });
+  }
+
+  // If not found, check all pages 1-10
+  if (!matchingQuestion) {
+    for (let page = 1; page <= 10; page++) {
+      const pageData = getPageQuestions(chapterId, page);
+      matchingQuestion = pageData.questions.find(q => {
+        const qLower = q.question.trim().toLowerCase();
+        const questionLower = question.trim().toLowerCase();
+        return qLower === questionLower ||
+               (qLower.length > 10 && questionLower.includes(qLower.substring(0, Math.min(15, qLower.length)))) ||
+               (questionLower.length > 10 && qLower.includes(questionLower.substring(0, Math.min(15, questionLower.length))));
+      });
+      if (matchingQuestion) break;
+    }
+  }
+
+  if (matchingQuestion) {
+    // Clean any undefined values from the answer
+    return matchingQuestion.answer.replace(/undefined/g, '').trim();
+  }
+
+  // Generate independent explanations based on question type and chapter
+  if (chapterId === 'ch2' || chapterId === 'chapter-2') {
+    // Chapter 2 specific responses
+    if (lowerQuestion.includes('মূল ধারণা') || lowerQuestion.includes('ধারণা')) {
+      return `এই অধ্যায়ের (গতি) মূল ধারণাগুলো হলো:\n\n১. স্থিতি ও গতি: বস্তুর অবস্থানের পরিবর্তন এবং পরসঙ্গ কাঠামোর ধারণা\n\n২. বিভিন্ন প্রকার গতি: রৈখিক, ঘূর্ণন, চলন, পর্যায়বৃত্ত গতি\n\n৩. স্কেলার ও ভেক্টর রাশি: দূরত্ব, সরণ, দ্রুতি, বেগ\n\n৪. ত্বরণ ও মন্দন: বেগের পরিবর্তনের হার\n\n৫. পড়ন্ত বস্তুর গতি: অভিকর্ষজ ত্বরণ এবং গ্যালিলিওর সূত্রাবলি\n\nএই বিষয়গুলো পদার্থবিজ্ঞানের ভিত্তি হিসেবে কাজ করে এবং পরবর্তী অধ্যায়গুলো বুঝতে সহায়তা করে।`;
+    }
+
+    if (lowerQuestion.includes('পৃষ্ঠা') || lowerQuestion.includes('আলোচনা')) {
+      const pageData = getPageQuestions(chapterId, currentPage);
+      if (pageData.questions.length > 0) {
+        // Return first question's answer as page summary
+        return pageData.questions[0].answer;
+      }
+      return `এই পৃষ্ঠায় গতি সম্পর্কিত বিষয় নিয়ে আলোচনা করা হয়েছে। গতি পদার্থবিজ্ঞানের একটি গুরুত্বপূর্ণ শাখা যা বলবিদ্যার অংশ।\n\nএই অধ্যায়ে আলোচিত বিষয়:\n- স্থিতি ও গতির ধারণা\n- বিভিন্ন প্রকার গতি\n- গতি সম্পর্কিত রাশিসমূহ\n- পড়ন্ত বস্তুর গতি\n\nআপনি যদি কোনো নির্দিষ্ট বিষয় সম্পর্কে জানতে চান, তাহলে আমাকে জিজ্ঞাসা করুন।`;
+    }
+
+    if (lowerQuestion.includes('ব্যাখ্যা') || lowerQuestion.includes('বিস্তারিত')) {
+      return `গতি হলো পদার্থবিজ্ঞানের একটি গুরুত্বপূর্ণ শাখা যা বলবিদ্যার অংশ।\n\nমূল বিষয়সমূহ:\n\n১. স্থিতি ও গতি: পরসঙ্গ কাঠামোর সাপেক্ষে বস্তুর অবস্থানের পরিবর্তন\n\n২. গতির প্রকারভেদ: রৈখিক, ঘূর্ণন, চলন, পর্যায়বৃত্ত গতি\n\n৩. রাশিসমূহ: দূরত্ব, সরণ, দ্রুতি, বেগ, ত্বরণ\n\n৪. পড়ন্ত বস্তু: অভিকর্ষজ ত্বরণ এবং গ্যালিলিওর সূত্রাবলি\n\nএই অধ্যায়ে এই বিষয়গুলো নিয়ে বিস্তারিত আলোচনা করা হয়েছে।`;
+    }
+
+    // Default response for chapter 2
+    return `আমি এই অধ্যায় (গতি) সম্পর্কে আপনাকে সাহায্য করতে পারি।\n\nএই অধ্যায়ে আলোচিত মূল বিষয়গুলো:\n\n• স্থিতি ও গতির ধারণা\n• পরসঙ্গ কাঠামো\n• বিভিন্ন প্রকার গতি (রৈখিক, ঘূর্ণন, চলন, পর্যায়বৃত্ত)\n• স্কেলার ও ভেক্টর রাশি\n• দূরত্ব, সরণ, দ্রুতি, বেগ\n• ত্বরণ ও মন্দন\n• পড়ন্ত বস্তুর গতি\n• অভিকর্ষজ ত্বরণ\n\nআপনি যদি কোনো নির্দিষ্ট বিষয় সম্পর্কে জানতে চান, তাহলে আমাকে জিজ্ঞাসা করুন। আমি বিস্তারিত ব্যাখ্যা দিতে পারব।`;
+  }
+
+  // Chapter 1 specific responses (fallback)
   if (lowerQuestion.includes('মূল ধারণা') || lowerQuestion.includes('ধারণা')) {
     return `এই অধ্যায়ের মূল ধারণাগুলো হলো:\n\n১. ভৌত রাশি: পদার্থবিজ্ঞানে ব্যবহৃত পরিমাপযোগ্য রাশি, যেমন দৈর্ঘ্য, ভর, সময় ইত্যাদি।\n\n২. পরিমাপ: বিভিন্ন ভৌত রাশির সঠিক পরিমাপের পদ্ধতি এবং একক।\n\n৩. পরিমাপের যন্ত্রপাতি: বিভিন্ন রাশি পরিমাপের জন্য ব্যবহৃত যন্ত্র, যেমন স্কেল, থার্মোমিটার, স্টপওয়াচ ইত্যাদি।\n\n৪. নির্ভুলতা ও যথার্থতা: পরিমাপের সঠিকতা বজায় রাখার কৌশল এবং ত্রুটির কারণ।\n\nএই বিষয়গুলো পদার্থবিজ্ঞানের ভিত্তি হিসেবে কাজ করে এবং পরবর্তী অধ্যায়গুলো বুঝতে সহায়তা করে।`;
   }

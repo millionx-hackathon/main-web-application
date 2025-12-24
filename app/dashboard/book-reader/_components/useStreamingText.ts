@@ -49,8 +49,8 @@ export function useStreamingText({ text, speed = 30, enabled = true }: UseStream
       }
     };
 
-    // Start streaming after a small delay
-    timeoutRef.current = setTimeout(streamNextWord, 100);
+    // Start streaming after a 1 second delay
+    timeoutRef.current = setTimeout(streamNextWord, 1000);
 
     return () => {
       if (timeoutRef.current) {

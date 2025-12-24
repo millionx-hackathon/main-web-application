@@ -164,9 +164,22 @@ function CollapsibleSection({
 }
 
 export function DashboardSidebar() {
-  const [isCollapsed, setIsCollapsed] = React.useState(false);
+  const [isCollapsed, setIsCollapsed] = React.useState(() => {
+    if (typeof window !== "undefined") {
+      const saved = localStorage.getItem("dashboard-sidebar-collapsed");
+      return saved === "true";
+    }
+    return false;
+  });
   const [isMobileOpen, setIsMobileOpen] = React.useState(false);
   const pathname = usePathname();
+
+  // Save collapsed state to localStorage whenever it changes
+  React.useEffect(() => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("dashboard-sidebar-collapsed", String(isCollapsed));
+    }
+  }, [isCollapsed]);
 
   return (
     <>
