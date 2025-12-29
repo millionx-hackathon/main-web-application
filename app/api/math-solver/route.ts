@@ -163,8 +163,8 @@ export async function POST(request: NextRequest) {
 
             const parsedResponse = JSON.parse(jsonStr) as MathSolverResponse;
             return NextResponse.json({
-                success: true,
                 ...parsedResponse,
+                success: true,
             });
         } catch (parseError) {
             console.error('JSON Parse Error:', parseError);

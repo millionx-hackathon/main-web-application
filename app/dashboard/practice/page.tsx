@@ -39,7 +39,8 @@ export default function PracticePage() {
   const sessionHistory = useAppSelector((state) => state.practice?.sessionHistory || []);
 
   useEffect(() => {
-    setIsMounted(true);
+    const timer = setTimeout(() => setIsMounted(true), 0);
+    return () => clearTimeout(timer);
   }, []);
 
   const subjects = [

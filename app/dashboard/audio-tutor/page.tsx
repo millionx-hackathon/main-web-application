@@ -19,6 +19,17 @@ import {
 } from 'lucide-react';
 import { useRouter, useSearchParams } from 'next/navigation';
 
+interface AudioMetadata {
+  Type: string;
+  Data: {
+    Offset: number;
+    Duration: number;
+    text?: {
+      Text: string;
+    };
+  };
+}
+
 function AudioTutorContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -31,7 +42,7 @@ function AudioTutorContent() {
   const [duration, setDuration] = useState(0);
   const [playbackRate, setPlaybackRate] = useState(1);
   const [script, setScript] = useState<string | null>(null);
-  const [scriptMetadata, setScriptMetadata] = useState<any[]>([]);
+  const [scriptMetadata, setScriptMetadata] = useState<AudioMetadata[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1);
   const [showExamples, setShowExamples] = useState(true);
 
@@ -54,6 +65,15 @@ function AudioTutorContent() {
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
   useEffect(() => {
+    // Try localStorage first (for long texts from reader)
+    const savedContext = localStorage.getItem('audio_tutor_context');
+    if (savedContext) {
+      setText(savedContext);
+      localStorage.removeItem('audio_tutor_context'); // Clean up
+      return;
+    }
+
+    // Fallback to URL search params
     const context = searchParams.get('context');
     if (context) {
       setText(context);
@@ -199,7 +219,7 @@ function AudioTutorContent() {
                 : 'text-slate-400 opacity-60'
             }`}
           >
-            {meta.Data.text.Text}
+            {meta.Data.text?.Text || ''}
           </span>
         ))}
       </div>

@@ -62,7 +62,10 @@ export default function PDFViewer({
         const page = await pdfDocument.getPage(currentPage);
         const textContent = await page.getTextContent();
         const text = textContent.items
-          .map((item: { str?: string }) => item.str || '')
+          .map((item) => {
+            const it = item as { str?: string };
+            return it.str || '';
+          })
           .join(' ')
           .replace(/\s+/g, ' ')
           .trim();

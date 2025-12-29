@@ -76,32 +76,36 @@ export default function MathSolverPage() {
     if (saved) {
       try {
         const parsed = JSON.parse(saved) as SavedSolution[];
-        setSavedSolutions(parsed);
 
-        // Check for ID in URL query params
-        const urlParams = new URLSearchParams(window.location.search);
-        const idFromUrl = urlParams.get('id');
+        // Wrap state updates in setTimeout to avoid cascading renders warning
+        setTimeout(() => {
+          setSavedSolutions(parsed);
 
-        if (idFromUrl) {
-          // Load specific solution by ID
-          const matchingSolution = parsed.find(s => s.id === idFromUrl);
-          if (matchingSolution) {
-            setSolution(matchingSolution.solution);
-            setActiveMethod(matchingSolution.solution.methods?.[0]?.name || 'factorization');
-            setCurrentSolutionId(matchingSolution.id);
-            setStage('completed');
-            return;
+          // Check for ID in URL query params
+          const urlParams = new URLSearchParams(window.location.search);
+          const idFromUrl = urlParams.get('id');
+
+          if (idFromUrl) {
+            // Load specific solution by ID
+            const matchingSolution = parsed.find(s => s.id === idFromUrl);
+            if (matchingSolution) {
+              setSolution(matchingSolution.solution);
+              setActiveMethod(matchingSolution.solution.methods?.[0]?.name || 'factorization');
+              setCurrentSolutionId(matchingSolution.id);
+              setStage('completed');
+              return;
+            }
           }
-        }
 
-        // Otherwise show most recent if exists
-        if (parsed.length > 0) {
-          const recent = parsed[0];
-          setSolution(recent.solution);
-          setActiveMethod(recent.solution.methods?.[0]?.name || 'factorization');
-          setCurrentSolutionId(recent.id);
-          setStage('completed');
-        }
+          // Otherwise show most recent if exists
+          if (parsed.length > 0) {
+            const recent = parsed[0];
+            setSolution(recent.solution);
+            setActiveMethod(recent.solution.methods?.[0]?.name || 'factorization');
+            setCurrentSolutionId(recent.id);
+            setStage('completed');
+          }
+        }, 0);
       } catch (e) {
         console.error('Failed to load saved solutions:', e);
       }

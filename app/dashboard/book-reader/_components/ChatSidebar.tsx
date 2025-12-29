@@ -73,9 +73,9 @@ export default function ChatSidebar({
       }
     };
 
-    window.addEventListener('askAI' as any, handleAskAI as EventListener);
+    window.addEventListener('askAI' as keyof WindowEventMap, handleAskAI as EventListener);
     return () => {
-      window.removeEventListener('askAI' as any, handleAskAI as EventListener);
+      window.removeEventListener('askAI' as keyof WindowEventMap, handleAskAI as EventListener);
     };
   }, [currentPage, chapterTitle]);
 
@@ -607,9 +607,10 @@ export default function ChatSidebar({
 
             <button
               onClick={() => {
-                const searchParams = new URLSearchParams();
-                if (pageText) searchParams.set('context', pageText);
-                router.push(`/dashboard/audio-tutor?${searchParams.toString()}`);
+                if (pageText) {
+                  localStorage.setItem('audio_tutor_context', pageText);
+                }
+                router.push('/dashboard/audio-tutor');
               }}
               className="w-full mt-3 py-1.5 border border-indigo-100 text-[10px] font-bold text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
             >

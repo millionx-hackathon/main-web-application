@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { ArrowLeft, MessageSquare, X, Send, Loader2, Sparkles, FileQuestion, FileText, Layers, BarChart3, Star } from 'lucide-react';
+import { ArrowLeft, MessageSquare, X, FileText, Layers, BarChart3, Star } from 'lucide-react';
 import { getBookById, getChapterById, getDirectPdfUrl } from '../../_data/books';
 import PDFViewer from '../../_components/PDFViewer';
 import ChatSidebar from '../../_components/ChatSidebar';
@@ -48,8 +48,9 @@ export default function ChapterReaderPage() {
   const [pdfScale, setPdfScale] = useState(1.2);
   const [totalPages, setTotalPages] = useState(100); // Default, will be updated from PDF
   const [currentPageText, setCurrentPageText] = useState<string>(''); // Extracted text from current PDF page
-  const readingStartTime = useRef<number>(Date.now());
-  const lastPageChangeTime = useRef<number>(Date.now());
+  const [now] = useState(() => Date.now());
+  const readingStartTime = useRef<number>(now);
+  const lastPageChangeTime = useRef<number>(now);
 
   // New feature states
   const [showSummary, setShowSummary] = useState(false);
@@ -67,21 +68,7 @@ export default function ChapterReaderPage() {
     (state) => state.bookReader?.textHighlights?.[`${bookId}/${chapterId}`]?.filter(h => h.page === currentPage) || []
   );
 
-  if (!book || !chapter) {
-    return (
-      <div className="p-8 text-center">
-        <h1 className="text-2xl font-bold text-gray-900 mb-4">অধ্যায় খুঁজে পাওয়া যায়নি</h1>
-        <button
-          onClick={() => router.back()}
-          className="text-indigo-600 hover:underline"
-        >
-          ফিরে যান
-        </button>
-      </div>
-    );
-  }
-
-  const handleTextSelection = () => {
+  const handleTextSelection = useCallback(() => {
     const selection = window.getSelection();
     if (!selection || selection.rangeCount === 0 || selection.toString().trim().length === 0) {
       return;
@@ -141,7 +128,7 @@ export default function ChapterReaderPage() {
       // Don't clear selection, just don't show popup
       // This allows normal text selection elsewhere
     }
-  };
+  }, [currentPage]);
 
   const handleAddToContext = () => {
     if (selectedText) {
@@ -226,9 +213,9 @@ export default function ChapterReaderPage() {
   // Load last read page on mount
   useEffect(() => {
     if (lastReadPage && lastReadPage > 0) {
-      setCurrentPage(lastReadPage);
+      setTimeout(() => setCurrentPage(lastReadPage), 0);
     }
-  }, [bookId, chapterId]); // Only run when book/chapter changes
+  }, [bookId, chapterId, lastReadPage]);
 
   // Save current page whenever it changes
   useEffect(() => {
@@ -242,7 +229,7 @@ export default function ChapterReaderPage() {
       }
       lastPageChangeTime.current = Date.now();
     }
-  }, [currentPage, bookId, chapterId, dispatch]);
+  }, [currentPage, bookId, chapterId, dispatch, book, chapter]);
 
   // Track reading time on unmount
   useEffect(() => {
@@ -254,14 +241,28 @@ export default function ChapterReaderPage() {
         }
       }
     };
-  }, [bookId, chapterId, dispatch]);
+  }, [bookId, chapterId, dispatch, book, chapter]);
 
   useEffect(() => {
     document.addEventListener('mouseup', handleTextSelection);
     return () => {
       document.removeEventListener('mouseup', handleTextSelection);
     };
-  }, [currentPage]);
+  }, [currentPage, handleTextSelection]);
+
+  if (!book || !chapter) {
+    return (
+      <div className="p-8 text-center">
+        <h1 className="text-2xl font-bold text-gray-900 mb-4">অধ্যায় খুঁজে পাওয়া যায়নি</h1>
+        <button
+          onClick={() => router.back()}
+          className="text-indigo-600 hover:underline"
+        >
+          ফিরে যান
+        </button>
+      </div>
+    );
+  }
 
   return (
     <div className="h-screen flex flex-col bg-gray-50" lang="bn">

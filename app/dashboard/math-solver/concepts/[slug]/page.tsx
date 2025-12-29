@@ -4,9 +4,10 @@ import {
     ArrowLeft, BookOpen, FunctionSquare,
     CheckCircle2, AlertTriangle,
     Target, Split, PenTool,
-    Clock, BarChart, Layers,
-    Lightbulb, GraduationCap, ChevronRight,
-    Atom, MoveRight
+    Clock, Layers,
+    Lightbulb, GraduationCap,
+    Atom, MoveRight,
+    LucideIcon
 } from 'lucide-react';
 
 // Enhanced Data Model
@@ -16,7 +17,7 @@ const conceptsData: Record<string, {
     category: string;
     difficulty: 'Easy' | 'Medium' | 'Hard';
     duration: string;
-    icon: any;
+    icon: LucideIcon;
     color: string;
     heroGradient: string;
     intro: string;
@@ -33,7 +34,7 @@ const conceptsData: Record<string, {
     realWorld: {
         title: string;
         description: string;
-        icon: any;
+        icon: LucideIcon;
     };
 }> = {
     "quadratic-formula": {
@@ -195,7 +196,7 @@ const conceptsData: Record<string, {
                  </div>
 
                  <p className="text-slate-500 italic max-w-md mx-auto">
-                    "একটি বড় সমস্যাকে ছোট ছোট সমাধানযোগ্য অংশে ভাগ করে নেওয়াই হলো উৎপাদক।"
+                    &quot;একটি বড় সমস্যাকে ছোট ছোট সমাধানযোগ্য অংশে ভাগ করে নেওয়াই হলো উৎপাদক।&quot;
                  </p>
             </div>
         ),

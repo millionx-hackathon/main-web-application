@@ -64,7 +64,7 @@ export default function ProgressPage() {
 
   // Initialize demo data on first load
   useEffect(() => {
-    setIsMounted(true);
+    setTimeout(() => setIsMounted(true), 0);
 
     // Check if demo data has been initialized
     const demoInitialized = localStorage.getItem('progress_demo_initialized');
@@ -257,7 +257,7 @@ export default function ProgressPage() {
           chapterId,
           bookTitle: book?.title || 'Unknown Book',
           chapterTitle: chapter?.title || 'Unknown Chapter',
-          lastReadAt: session.lastReadAt || Date.now(),
+          lastReadAt: session.lastReadAt || 0,
           totalPagesRead: session.totalPagesRead || 0,
           readingTime: session.readingTime || 0,
           bookmarks: (session.bookmarks || []).length,
@@ -294,7 +294,7 @@ export default function ProgressPage() {
         duration,
         questions: session.metrics.totalQuestions,
         correct: session.metrics.correctAnswers,
-        completedAt: session.endTime || Date.now(),
+        completedAt: session.endTime || 0,
       };
     });
   }, [practiceState]);

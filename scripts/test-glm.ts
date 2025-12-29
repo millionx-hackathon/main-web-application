@@ -1,11 +1,11 @@
 // GLM API Test Script - Full Response Debug
 // Run with: npx ts-node scripts/test-glm.ts
 
+import * as fs from 'fs';
+import * as path from 'path';
+
 const testGLM = async () => {
     // Read .env.local manually
-    const fs = require('fs');
-    const path = require('path');
-
     let apiKey = process.env.GLM_KEY;
 
     // Try to read from .env.local if not in env

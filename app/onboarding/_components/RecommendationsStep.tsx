@@ -5,9 +5,16 @@ import { PlayCircle, Download, ArrowRight, AlertTriangle, BookOpen, Clock, Targe
 import { useRouter } from 'next/navigation';
 import { studyPlan, recommendedVideos } from '../_data/recommendations';
 
+interface UserData {
+  studentClass: string;
+  group: string;
+  quizScore: number;
+  quizAnswers: Record<string, unknown>;
+}
+
 interface RecommendationsStepProps {
   score: number;
-  userData: any;
+  userData: UserData;
 }
 
 export const RecommendationsStep: React.FC<RecommendationsStepProps> = ({ score, userData }) => {

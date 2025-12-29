@@ -1,11 +1,11 @@
 import { auth } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
   BookOpen,
   Phone,
   Calculator,
   Target,
-  FileText,
   TrendingUp,
   Award,
   Clock,
@@ -143,7 +143,7 @@ export default async function DashboardPage() {
                     কুইক অ্যাকশন
                 </h2>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <a
+                <Link
                     href="/dashboard/voice-ai"
                     className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200 hover:shadow-2xl hover:scale-[1.02] transition-all group relative overflow-hidden"
                 >
@@ -157,9 +157,9 @@ export default async function DashboardPage() {
                     <p className="text-indigo-100 text-sm">
                     সরাসরি কথা বলে যেকোনো টপিক বুঝে নিন।
                     </p>
-                </a>
+                </Link>
 
-                <a
+                <Link
                     href="/dashboard/math-solver"
                     className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
                 >
@@ -172,9 +172,9 @@ export default async function DashboardPage() {
                     <p className="text-sm text-gray-600">
                     অংকের ছবি তুলে মুহূর্তেই সমাধান পান।
                     </p>
-                </a>
+                </Link>
 
-                <a
+                <Link
                     href="/dashboard/practice"
                     className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
                 >
@@ -187,9 +187,9 @@ export default async function DashboardPage() {
                     <p className="text-sm text-gray-600">
                     চ্যাপ্টার ভিত্তিক কুইজ এবং মডেল টেস্ট।
                     </p>
-                </a>
+                </Link>
 
-                <a
+                <Link
                     href="/dashboard/book-reader"
                     className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
                 >
@@ -202,7 +202,7 @@ export default async function DashboardPage() {
                     <p className="text-sm text-gray-600">
                     NCTB বই এবং ইন্টারেক্টিভ রিডিং।
                     </p>
-                </a>
+                </Link>
                 </div>
             </div>
 
