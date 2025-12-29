@@ -1,19 +1,17 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 import {
-  Calculator, Upload, Scan, RotateCcw, Play, Pause,
-  Lightbulb, CheckCircle2, Split, FunctionSquare,
-  ChevronDown, ChevronUp, Search, Info, TrendingUp, Layers, BadgeHelp,
-  Camera, Type, Loader2, Sparkles, AlertCircle
+  Calculator, Upload, RotateCcw,
+  Lightbulb, CheckCircle2, FunctionSquare,
+  ChevronDown, ChevronUp, Layers,
+  Camera, Type, Loader2, AlertCircle, History, Sparkles
 } from 'lucide-react';
-import ReactMarkdown from 'react-markdown';
 
 // Types
-type SolveMethod = 'factorization' | 'formula';
-type ViewMode = 'steps' | 'graph' | 'concepts';
-type ProcessingStage = 'idle' | 'ocr' | 'analyzing' | 'computing' | 'completed' | 'error';
-type InputMode = 'demo' | 'text' | 'upload';
+type ProcessingStage = 'idle' | 'processing' | 'completed' | 'error';
+type InputMode = 'text' | 'upload';
 
 interface MathStep {
   id: number;
@@ -22,7 +20,6 @@ interface MathStep {
   explanation: string;
   deepDive?: string;
   rule?: string;
-  highlight?: string;
 }
 
 interface SolutionMethod {
@@ -44,33 +41,102 @@ interface MathSolution {
   finalAnswer: string;
 }
 
+interface SavedSolution {
+  id: string;
+  equation: string;
+  solution: MathSolution;
+  timestamp: number;
+  imageUsed?: boolean;
+}
+
+// Local storage key
+const STORAGE_KEY = 'shikkha-math-solutions';
+
 export default function MathSolverPage() {
+  const router = useRouter();
   const [stage, setStage] = useState<ProcessingStage>('idle');
-  const [inputMode, setInputMode] = useState<InputMode>('demo');
+  const [inputMode, setInputMode] = useState<InputMode>('upload');
   const [textInput, setTextInput] = useState('');
   const [activeMethod, setActiveMethod] = useState<string>('');
-  const [viewMode, setViewMode] = useState<ViewMode>('steps');
-  const [hoveredStep, setHoveredStep] = useState<number | null>(null);
   const [expandedStep, setExpandedStep] = useState<number | null>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const [solution, setSolution] = useState<MathSolution | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
+  const [savedSolutions, setSavedSolutions] = useState<SavedSolution[]>([]);
+  const [currentSolutionId, setCurrentSolutionId] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Demo image path
   const demoImagePath = '/math/image.png';
 
+  // Load saved solutions on mount and handle query params
+  useEffect(() => {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved) as SavedSolution[];
+        setSavedSolutions(parsed);
+
+        // Check for ID in URL query params
+        const urlParams = new URLSearchParams(window.location.search);
+        const idFromUrl = urlParams.get('id');
+
+        if (idFromUrl) {
+          // Load specific solution by ID
+          const matchingSolution = parsed.find(s => s.id === idFromUrl);
+          if (matchingSolution) {
+            setSolution(matchingSolution.solution);
+            setActiveMethod(matchingSolution.solution.methods?.[0]?.name || 'factorization');
+            setCurrentSolutionId(matchingSolution.id);
+            setStage('completed');
+            return;
+          }
+        }
+
+        // Otherwise show most recent if exists
+        if (parsed.length > 0) {
+          const recent = parsed[0];
+          setSolution(recent.solution);
+          setActiveMethod(recent.solution.methods?.[0]?.name || 'factorization');
+          setCurrentSolutionId(recent.id);
+          setStage('completed');
+        }
+      } catch (e) {
+        console.error('Failed to load saved solutions:', e);
+      }
+    }
+  }, []);
+
+  // Save solution to localStorage
+  const saveSolution = (sol: MathSolution, imageUsed: boolean = false) => {
+    const id = `math-${Date.now()}`;
+    const newSaved: SavedSolution = {
+      id,
+      equation: sol.equation,
+      solution: sol,
+      timestamp: Date.now(),
+      imageUsed,
+    };
+
+    const updated = [newSaved, ...savedSolutions.slice(0, 9)]; // Keep last 10
+    setSavedSolutions(updated);
+    setCurrentSolutionId(id);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(updated));
+
+    // Update URL without navigation
+    window.history.pushState({}, '', `/dashboard/math-solver?id=${id}`);
+  };
+
   // Handle demo image click
   const handleDemoClick = async () => {
-    setStage('ocr');
+    setStage('processing');
     setError(null);
     setLogs([]);
     setSolution(null);
 
-    addLog("📷 Demo image detected...", 0);
-    addLog("🔍 Initializing OCR Engine...", 500);
-    addLog("📝 Extracting equation from image...", 1000);
+    addLog("📷 ছবি প্রসেস হচ্ছে...", 0);
+    addLog("🔍 সমীকরণ খোঁজা হচ্ছে...", 500);
 
     try {
       const response = await fetch('/api/math-solver', {
@@ -79,29 +145,22 @@ export default function MathSolverPage() {
         body: JSON.stringify({ imagePath: 'math/image.png' }),
       });
 
-      setTimeout(() => {
-        addLog("🧮 Analyzing equation structure...", 0);
-        setStage('analyzing');
-      }, 1500);
+      addLog("🧮 AI দিয়ে সমাধান করা হচ্ছে...", 1500);
 
       const data = await response.json();
 
       setTimeout(() => {
-        addLog("⚙️ Computing solution steps...", 0);
-        setStage('computing');
-      }, 2500);
-
-      setTimeout(() => {
         if (data.success) {
-          addLog("✅ Solution generated successfully!", 0);
+          addLog("✅ সমাধান সম্পন্ন!", 0);
           setSolution(data);
           setActiveMethod(data.methods?.[0]?.name || 'factorization');
+          saveSolution(data, true);
           setStage('completed');
         } else {
-          setError(data.error || 'Failed to solve equation');
+          setError(data.error || 'সমাধান করতে সমস্যা হয়েছে');
           setStage('error');
         }
-      }, 3500);
+      }, 2500);
 
     } catch (err) {
       console.error('API Error:', err);
@@ -114,13 +173,13 @@ export default function MathSolverPage() {
   const handleTextSubmit = async () => {
     if (!textInput.trim()) return;
 
-    setStage('ocr');
+    setStage('processing');
     setError(null);
     setLogs([]);
     setSolution(null);
 
-    addLog(`📝 Equation received: ${textInput}`, 0);
-    addLog("🔍 Parsing mathematical expression...", 500);
+    addLog(`📝 সমীকরণ: ${textInput}`, 0);
+    addLog("🧮 AI দিয়ে সমাধান করা হচ্ছে...", 500);
 
     try {
       const response = await fetch('/api/math-solver', {
@@ -129,29 +188,20 @@ export default function MathSolverPage() {
         body: JSON.stringify({ equation: textInput }),
       });
 
-      setTimeout(() => {
-        addLog("🧮 Identifying equation type...", 0);
-        setStage('analyzing');
-      }, 1000);
-
       const data = await response.json();
 
       setTimeout(() => {
-        addLog("⚙️ Generating step-by-step solution...", 0);
-        setStage('computing');
-      }, 2000);
-
-      setTimeout(() => {
         if (data.success) {
-          addLog("✅ Solution ready!", 0);
+          addLog("✅ সমাধান সম্পন্ন!", 0);
           setSolution(data);
           setActiveMethod(data.methods?.[0]?.name || 'factorization');
+          saveSolution(data, false);
           setStage('completed');
         } else {
-          setError(data.error || 'Failed to solve equation');
+          setError(data.error || 'সমাধান করতে সমস্যা হয়েছে');
           setStage('error');
         }
-      }, 3000);
+      }, 2000);
 
     } catch (err) {
       console.error('API Error:', err);
@@ -171,13 +221,13 @@ export default function MathSolverPage() {
       const base64Data = base64.split(',')[1];
       setUploadedImage(base64);
 
-      setStage('ocr');
+      setStage('processing');
       setError(null);
       setLogs([]);
       setSolution(null);
 
-      addLog("📷 Image uploaded successfully!", 0);
-      addLog("🔍 Running OCR on image...", 500);
+      addLog("📷 ছবি আপলোড হয়েছে!", 0);
+      addLog("🔍 OCR দিয়ে সমীকরণ পড়া হচ্ছে...", 500);
 
       try {
         const response = await fetch('/api/math-solver', {
@@ -186,29 +236,22 @@ export default function MathSolverPage() {
           body: JSON.stringify({ imageBase64: base64Data }),
         });
 
-        setTimeout(() => {
-          addLog("🧮 Extracting equations...", 0);
-          setStage('analyzing');
-        }, 1500);
+        addLog("🧮 ধাপে ধাপে সমাধান করা হচ্ছে...", 1500);
 
         const data = await response.json();
 
         setTimeout(() => {
-          addLog("⚙️ Solving with AI...", 0);
-          setStage('computing');
-        }, 2500);
-
-        setTimeout(() => {
           if (data.success) {
-            addLog("✅ Done!", 0);
+            addLog("✅ সম্পন্ন!", 0);
             setSolution(data);
             setActiveMethod(data.methods?.[0]?.name || 'factorization');
+            saveSolution(data, true);
             setStage('completed');
           } else {
-            setError(data.error || 'Failed to solve');
+            setError(data.error || 'সমাধান করতে সমস্যা হয়েছে');
             setStage('error');
           }
-        }, 3500);
+        }, 2500);
 
       } catch (err) {
         console.error('API Error:', err);
@@ -217,6 +260,15 @@ export default function MathSolverPage() {
       }
     };
     reader.readAsDataURL(file);
+  };
+
+  // Load a saved solution
+  const loadSavedSolution = (saved: SavedSolution) => {
+    setSolution(saved.solution);
+    setActiveMethod(saved.solution.methods?.[0]?.name || 'factorization');
+    setCurrentSolutionId(saved.id);
+    setStage('completed');
+    window.history.pushState({}, '', `/dashboard/math-solver?id=${saved.id}`);
   };
 
   const addLog = (msg: string, delay: number) => {
@@ -233,6 +285,8 @@ export default function MathSolverPage() {
     setTextInput('');
     setUploadedImage(null);
     setExpandedStep(null);
+    setCurrentSolutionId(null);
+    window.history.pushState({}, '', '/dashboard/math-solver');
   };
 
   // Get current method steps
@@ -250,8 +304,19 @@ export default function MathSolverPage() {
             </div>
             Math Solver <span className="text-xs bg-indigo-100 text-indigo-700 px-2 py-1 rounded-full font-bold tracking-wider">AI</span>
           </h1>
-          <p className="text-slate-500 mt-1 text-sm">Powered by Shikkha AI • Gemini</p>
+          <p className="text-slate-500 mt-1 text-sm">Powered by Shikkha AI</p>
         </div>
+
+        {/* History indicator */}
+        {savedSolutions.length > 0 && stage !== 'idle' && (
+          <button
+            onClick={resetSolver}
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            <RotateCcw className="w-4 h-4" />
+            নতুন সমস্যা
+          </button>
+        )}
       </div>
 
       <div className="max-w-6xl mx-auto">
@@ -261,11 +326,10 @@ export default function MathSolverPage() {
           <div className="space-y-6">
 
             {/* Input Mode Tabs */}
-            <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm inline-flex w-full max-w-md mx-auto">
+            <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm inline-flex w-full max-w-sm mx-auto">
               {[
-                { id: 'demo', label: 'Demo', icon: Sparkles },
-                { id: 'text', label: 'Type Equation', icon: Type },
-                { id: 'upload', label: 'Upload Image', icon: Camera },
+                { id: 'upload', label: 'ছবি আপলোড', icon: Camera },
+                { id: 'text', label: 'সমীকরণ লিখুন', icon: Type },
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -282,42 +346,66 @@ export default function MathSolverPage() {
               ))}
             </div>
 
-            {/* Demo Mode - Show demo image */}
-            {inputMode === 'demo' && (
-              <div
-                onClick={handleDemoClick}
-                className="group relative overflow-hidden border-2 border-dashed border-slate-300 rounded-[2rem] bg-white p-8 text-center cursor-pointer transition-all hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-100"
-              >
-                <div className="absolute inset-0 bg-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
+            {/* Upload Mode */}
+            {inputMode === 'upload' && (
+              <div className="space-y-6">
+                {/* Main Upload Area */}
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="group relative overflow-hidden border-2 border-dashed border-slate-300 rounded-[2rem] bg-white p-12 text-center cursor-pointer transition-all hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-100"
+                >
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleImageUpload}
+                    className="hidden"
+                  />
+                  <div className="absolute inset-0 bg-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
 
-                <div className="relative z-10 space-y-6">
-                  <div className="relative mx-auto w-full max-w-md">
-                    <div className="bg-slate-100 rounded-2xl p-4 border border-slate-200 group-hover:border-indigo-300 transition-colors">
-                      <Image
-                        src={demoImagePath}
-                        alt="Demo Math Equation"
-                        width={400}
-                        height={200}
-                        className="rounded-xl mx-auto"
-                        priority
-                      />
+                  <div className="relative z-10 space-y-4">
+                    <div className="w-20 h-20 bg-indigo-50 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-500">
+                      <Upload className="w-8 h-8 text-indigo-600" />
                     </div>
-                    <div className="absolute -top-3 -right-3 bg-indigo-600 text-white text-xs font-bold px-3 py-1 rounded-full shadow-lg">
-                      Demo
+                    <div>
+                      <h2 className="text-2xl font-bold text-slate-800 mb-2">গণিতের ছবি আপলোড করুন</h2>
+                      <p className="text-slate-500 max-w-md mx-auto text-sm">
+                        হাতে লেখা বা প্রিন্টেড সমীকরণের ছবি তুলুন, AI সমাধান করে দেবে
+                      </p>
+                    </div>
+                    <div className="pt-2 flex justify-center gap-4 text-sm text-slate-400 font-medium">
+                      <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-green-500" /> JPG, PNG</span>
+                      <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-green-500" /> হাতে লেখা</span>
                     </div>
                   </div>
+                </div>
 
-                  <div>
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Click to Solve This Equation</h2>
-                    <p className="text-slate-500">
-                      AI will extract the equation from the image and solve it step-by-step
-                    </p>
+                {/* Example Image Section */}
+                <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                  <div className="flex items-center gap-2 mb-4">
+                    <Sparkles className="w-5 h-5 text-indigo-600" />
+                    <h3 className="font-bold text-slate-700">উদাহরণ দেখুন</h3>
+                    <span className="text-xs bg-green-100 text-green-700 px-2 py-0.5 rounded-full">ক্লিক করে ট্রাই করুন</span>
                   </div>
 
-                  <button className="inline-flex items-center gap-2 px-6 py-3 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 transition-colors group-hover:scale-105">
-                    <Scan className="w-5 h-5" />
-                    Solve with AI
-                  </button>
+                  <div
+                    onClick={handleDemoClick}
+                    className="relative cursor-pointer group rounded-xl overflow-hidden border border-slate-200 hover:border-indigo-400 transition-all hover:shadow-lg"
+                  >
+                    <Image
+                      src={demoImagePath}
+                      alt="Example Math Equation"
+                      width={400}
+                      height={150}
+                      className="w-full max-w-md mx-auto"
+                      priority
+                    />
+                    <div className="absolute inset-0 bg-indigo-600/0 group-hover:bg-indigo-600/10 transition-colors flex items-center justify-center">
+                      <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white px-4 py-2 rounded-full shadow-lg font-bold text-indigo-600 text-sm">
+                        এই সমীকরণটি সমাধান করুন →
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
@@ -327,8 +415,8 @@ export default function MathSolverPage() {
               <div className="bg-white rounded-[2rem] p-8 border border-slate-200 shadow-sm">
                 <div className="max-w-2xl mx-auto space-y-6">
                   <div className="text-center mb-6">
-                    <h2 className="text-2xl font-bold text-slate-800 mb-2">Type Your Equation</h2>
-                    <p className="text-slate-500 text-sm">Enter any math equation and AI will solve it step-by-step</p>
+                    <h2 className="text-2xl font-bold text-slate-800 mb-2">সমীকরণ টাইপ করুন</h2>
+                    <p className="text-slate-500 text-sm">যেকোনো গণিত সমীকরণ লিখুন, AI ধাপে ধাপে সমাধান করবে</p>
                   </div>
 
                   <div className="relative">
@@ -337,13 +425,14 @@ export default function MathSolverPage() {
                       value={textInput}
                       onChange={(e) => setTextInput(e.target.value)}
                       onKeyDown={(e) => e.key === 'Enter' && handleTextSubmit()}
-                      placeholder="e.g., x^2 - 5x + 6 = 0"
+                      placeholder="যেমন: x^2 - 5x + 6 = 0"
                       className="w-full px-6 py-4 text-xl font-mono border-2 border-slate-200 rounded-2xl focus:outline-none focus:border-indigo-500 focus:ring-4 focus:ring-indigo-100 transition-all"
                     />
                   </div>
 
                   <div className="flex flex-wrap gap-2 justify-center">
-                    {['x^2 - 5x + 6 = 0', '2x + 5 = 13', 'x^2 + 4x + 4 = 0', '3x - 7 = 2x + 5'].map((example) => (
+                    <span className="text-sm text-slate-400 mr-2">উদাহরণ:</span>
+                    {['x^2 - 5x + 6 = 0', '2x + 5 = 13', 'x^2 + 4x + 4 = 0'].map((example) => (
                       <button
                         key={example}
                         onClick={() => setTextInput(example)}
@@ -360,42 +449,29 @@ export default function MathSolverPage() {
                     className="w-full py-4 bg-indigo-600 text-white rounded-2xl font-bold text-lg hover:bg-indigo-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   >
                     <Calculator className="w-5 h-5" />
-                    Solve Equation
+                    সমাধান করুন
                   </button>
                 </div>
               </div>
             )}
 
-            {/* Upload Mode */}
-            {inputMode === 'upload' && (
-              <div
-                onClick={() => fileInputRef.current?.click()}
-                className="group relative overflow-hidden border-2 border-dashed border-slate-300 rounded-[2rem] bg-white p-16 text-center cursor-pointer transition-all hover:border-indigo-500 hover:shadow-2xl hover:shadow-indigo-100"
-              >
-                <input
-                  ref={fileInputRef}
-                  type="file"
-                  accept="image/*"
-                  onChange={handleImageUpload}
-                  className="hidden"
-                />
-                <div className="absolute inset-0 bg-indigo-50/50 opacity-0 group-hover:opacity-100 transition-opacity"></div>
-
-                <div className="relative z-10 space-y-6">
-                  <div className="w-24 h-24 bg-indigo-50 rounded-full flex items-center justify-center mx-auto group-hover:scale-110 transition-transform duration-500">
-                    <Upload className="w-10 h-10 text-indigo-600" />
-                  </div>
-                  <div>
-                    <h2 className="text-3xl font-bold text-slate-800 mb-3">Drop Equation Image Here</h2>
-                    <p className="text-slate-500 max-w-md mx-auto">
-                      Supports handwritten math, printed equations, and photos of textbooks
-                    </p>
-                  </div>
-                  <div className="pt-4 flex justify-center gap-4 text-sm text-slate-400 font-medium">
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-green-500" /> JPG, PNG</span>
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-green-500" /> Handwritten</span>
-                    <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4 text-green-500" /> Printed</span>
-                  </div>
+            {/* Recent Solutions */}
+            {savedSolutions.length > 0 && (
+              <div className="bg-white rounded-2xl border border-slate-200 p-6">
+                <div className="flex items-center gap-2 mb-4">
+                  <History className="w-5 h-5 text-slate-400" />
+                  <h3 className="font-bold text-slate-700">সাম্প্রতিক সমাধান</h3>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {savedSolutions.slice(0, 5).map((saved) => (
+                    <button
+                      key={saved.id}
+                      onClick={() => loadSavedSolution(saved)}
+                      className="px-4 py-2 bg-slate-50 hover:bg-indigo-50 border border-slate-200 hover:border-indigo-300 rounded-xl text-sm font-mono text-slate-700 hover:text-indigo-700 transition-colors"
+                    >
+                      {saved.equation.length > 20 ? saved.equation.slice(0, 20) + '...' : saved.equation}
+                    </button>
+                  ))}
                 </div>
               </div>
             )}
@@ -403,8 +479,8 @@ export default function MathSolverPage() {
         )}
 
         {/* VIEW 2: PROCESSING */}
-        {(stage === 'ocr' || stage === 'analyzing' || stage === 'computing') && (
-          <div className="bg-slate-950 rounded-[2rem] overflow-hidden shadow-2xl relative h-[500px] flex flex-col font-mono">
+        {stage === 'processing' && (
+          <div className="bg-slate-950 rounded-[2rem] overflow-hidden shadow-2xl relative h-[400px] flex flex-col font-mono">
             {/* Terminal Header */}
             <div className="bg-slate-900 px-6 py-4 flex items-center gap-2 border-b border-slate-800">
               <div className="flex gap-2 mr-4">
@@ -412,7 +488,7 @@ export default function MathSolverPage() {
                 <div className="w-3 h-3 rounded-full bg-yellow-500"></div>
                 <div className="w-3 h-3 rounded-full bg-green-500"></div>
               </div>
-              <span className="text-slate-400 text-xs">shikkha-ai-math-solver — processing</span>
+              <span className="text-slate-400 text-xs">shikkha-ai-math-solver</span>
             </div>
 
             {/* Terminal Body */}
@@ -423,20 +499,9 @@ export default function MathSolverPage() {
                   {log}
                 </div>
               ))}
-              <div className="w-3 h-5 bg-green-400 animate-pulse inline-block mt-2"></div>
-            </div>
-
-            {/* Progress Status */}
-            <div className="bg-slate-900 p-6 border-t border-slate-800">
-              <div className="flex justify-between text-xs text-slate-400 mb-2 uppercase tracking-widest font-bold">
-                <span>Status: {stage}</span>
-                <span>{stage === 'ocr' ? '30%' : stage === 'analyzing' ? '60%' : '90%'}</span>
-              </div>
-              <div className="h-1 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className="h-full bg-green-500 transition-all duration-1000 ease-linear shadow-[0_0_10px_rgba(34,197,94,0.5)]"
-                  style={{ width: stage === 'ocr' ? '30%' : stage === 'analyzing' ? '60%' : '95%' }}
-                ></div>
+              <div className="flex items-center gap-2 mt-4">
+                <Loader2 className="w-5 h-5 animate-spin" />
+                <span>প্রসেসিং...</span>
               </div>
             </div>
           </div>
@@ -463,27 +528,26 @@ export default function MathSolverPage() {
         {stage === 'completed' && solution && (
           <div className="grid grid-cols-12 gap-6 animate-in fade-in slide-in-from-bottom-8 duration-700">
 
-            {/* Sidebar: Equation Info */}
+            {/* Sidebar */}
             <div className="col-span-12 md:col-span-4 space-y-6">
+              {/* Equation Card */}
               <div className="bg-white rounded-3xl p-6 border border-slate-200 shadow-sm text-center">
-                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Input Equation</p>
+                <p className="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">সমীকরণ</p>
                 <div className="text-2xl font-mono font-bold text-slate-800 py-4 border-b border-slate-100 mb-4">
                   {solution.equation}
                 </div>
                 <p className="text-sm text-indigo-600 font-medium mb-4">{solution.equationType_bn}</p>
-                <div className="flex gap-2 justify-center">
-                  <button onClick={resetSolver} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold text-slate-600 transition-colors">
-                    <RotateCcw className="w-4 h-4" /> New Scan
-                  </button>
-                </div>
+                <button onClick={resetSolver} className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 rounded-xl text-sm font-bold text-slate-600 transition-colors mx-auto">
+                  <RotateCcw className="w-4 h-4" /> নতুন সমস্যা
+                </button>
               </div>
 
-              {/* Variables Display */}
-              {solution.variables && (
+              {/* Variables */}
+              {solution.variables && Object.keys(solution.variables).length > 0 && (
                 <div className="bg-slate-900 rounded-3xl p-6 text-white">
                   <div className="flex items-center gap-2 mb-4 opacity-70 border-b border-slate-700 pb-2">
                     <FunctionSquare className="w-4 h-4" />
-                    <span className="text-xs font-bold uppercase tracking-widest">Variables</span>
+                    <span className="text-xs font-bold uppercase tracking-widest">চলক সমূহ</span>
                   </div>
                   <div className="grid grid-cols-3 gap-3 text-center">
                     {Object.entries(solution.variables).map(([key, value]) => (
@@ -508,13 +572,13 @@ export default function MathSolverPage() {
               {/* Related Concepts */}
               <div className="bg-indigo-900 rounded-3xl p-6 text-white">
                 <h3 className="font-bold flex items-center gap-2 mb-4">
-                  <Layers className="w-5 h-5" /> Related Concepts
+                  <Layers className="w-5 h-5" /> সম্পর্কিত বিষয়
                 </h3>
                 <div className="space-y-2">
                   {[
-                    { label: 'Quadratic Formula', slug: 'quadratic-formula' },
-                    { label: 'Parabolas', slug: 'parabolas' },
-                    { label: 'Factorization', slug: 'factorization' }
+                    { label: 'দ্বিঘাত সূত্র', slug: 'quadratic-formula' },
+                    { label: 'প্যারাবোলা', slug: 'parabolas' },
+                    { label: 'উৎপাদক বিশ্লেষণ', slug: 'factorization' }
                   ].map((item) => (
                     <a
                       key={item.slug}
@@ -529,11 +593,11 @@ export default function MathSolverPage() {
               </div>
             </div>
 
-            {/* Main Content: Steps and Explanations */}
+            {/* Main Content */}
             <div className="col-span-12 md:col-span-8 space-y-6">
 
               {/* Method Tabs */}
-              {solution.methods.length > 1 && (
+              {solution.methods && solution.methods.length > 1 && (
                 <div className="bg-white p-1.5 rounded-2xl border border-slate-200 shadow-sm inline-flex w-full mb-2">
                   {solution.methods.map((method) => (
                     <button
@@ -551,7 +615,7 @@ export default function MathSolverPage() {
                 </div>
               )}
 
-              {/* Steps List */}
+              {/* Steps */}
               <div className="space-y-4">
                 {currentMethodSteps.map((step, idx) => (
                   <div
@@ -562,7 +626,6 @@ export default function MathSolverPage() {
                         : 'border-slate-200 shadow-sm hover:border-indigo-300'
                     }`}
                   >
-                    {/* Header */}
                     <div
                       onClick={() => setExpandedStep(expandedStep === step.id ? null : step.id)}
                       className="p-6 cursor-pointer flex items-start gap-4"
@@ -588,7 +651,6 @@ export default function MathSolverPage() {
                       </button>
                     </div>
 
-                    {/* Expanded Content */}
                     {expandedStep === step.id && (
                       <div className="bg-indigo-50/50 p-6 border-t border-indigo-100 animate-in slide-in-from-top-2">
                         <div className="flex gap-4">
@@ -601,7 +663,7 @@ export default function MathSolverPage() {
                             </p>
                             {step.deepDive && (
                               <div className="bg-white p-4 rounded-xl border border-indigo-100 text-sm text-slate-600 leading-relaxed shadow-sm">
-                                <span className="font-bold text-indigo-600 block mb-1">যুক্তি (Reasoning):</span>
+                                <span className="font-bold text-indigo-600 block mb-1">যুক্তি:</span>
                                 <span className="bengali-text">{step.deepDive}</span>
                               </div>
                             )}
@@ -619,8 +681,8 @@ export default function MathSolverPage() {
                       <CheckCircle2 className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <h3 className="font-bold text-lg">Solution Verified ✓</h3>
-                      <p className="text-green-100 text-sm">AI-generated step-by-step solution</p>
+                      <h3 className="font-bold text-lg">সমাধান সঠিক ✓</h3>
+                      <p className="text-green-100 text-sm">AI দ্বারা যাচাইকৃত ধাপে ধাপে সমাধান</p>
                     </div>
                   </div>
                 </div>
