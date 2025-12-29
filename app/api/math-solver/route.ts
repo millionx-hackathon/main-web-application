@@ -48,9 +48,9 @@ export async function POST(request: NextRequest) {
             }, { status: 400 });
         }
 
-        // Initialize the model
+        // Initialize the model - using gemini-2.0-flash for higher rate limits
         const model = genAI.getGenerativeModel({
-            model: 'gemini-2.5-flash-lite',
+            model: 'gemini-2.0-flash',
             generationConfig: {
                 temperature: 0.3,
                 topK: 40,
