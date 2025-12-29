@@ -38,7 +38,7 @@ export default function ChapterReaderPage() {
     (state) => state.bookReader?.lastReadPages?.[`${bookId}/${chapterId}`]
   );
 
-  const [chatOpen, setChatOpen] = useState(false);
+  const [chatOpen, setChatOpen] = useState(true);
   const [selectedText, setSelectedText] = useState<string>('');
   const [showTextPopup, setShowTextPopup] = useState(false);
   const [popupPosition, setPopupPosition] = useState({ x: 0, y: 0 });

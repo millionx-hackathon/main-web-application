@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, FileQuestion, Trash2, Copy, Check, Headphones, Play, Pause, RotateCcw, Volume2 } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, FileQuestion, Trash2, Copy, Check, Headphones, Play, Pause, RotateCcw, Volume2, Info } from 'lucide-react';
 import ReactMarkdown from 'react-markdown';
 import StreamingMessage from './StreamingMessage';
 import QuizGenerator from './QuizGenerator';
@@ -539,7 +539,15 @@ export default function ChatSidebar({
             </div>
             <div>
               <p className="text-sm font-bold text-gray-900 leading-tight">শিক্ষা ভাই-এর ব্যাখ্যা</p>
-              <p className="text-[10px] text-indigo-600 font-medium uppercase tracking-wider">Audio Tutor</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[10px] text-indigo-600 font-medium uppercase tracking-wider">Audio Tutor</p>
+                  <div className="relative group cursor-help">
+                    <Info className="w-3 h-3 text-indigo-400" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 p-2 bg-slate-900/90 text-[9px] text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none backdrop-blur-sm border border-white/10 shadow-xl z-50 normal-case font-normal leading-tight">
+                      The audio is played using no external services! It uses the Edge-TTS protocol.
+                    </div>
+                  </div>
+                </div>
             </div>
           </div>
 
@@ -596,12 +604,6 @@ export default function ChatSidebar({
                 />
               </div>
             </div>
-
-            {audioScript && (
-              <div className="mt-3 p-2 bg-slate-50 rounded-lg text-[10px] text-slate-500 italic line-clamp-3 hover:line-clamp-none transition-all cursor-default">
-                "{audioScript}"
-              </div>
-            )}
 
             <button
               onClick={() => router.push('/dashboard/audio-tutor')}

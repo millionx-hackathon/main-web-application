@@ -3,7 +3,7 @@ import WebSocket from 'ws';
 import { v4 as uuidv4 } from 'uuid';
 
 const GLM_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
-const GLM_MODEL = 'glm-4.7';
+const GLM_MODEL = 'GLM-4.5-AirX';
 
 // Edge TTS Constants
 const EDGE_TTS_URL = 'wss://speech.platform.bing.com/consumer/speech/synthesize/readaloud/edge/v1?TrustedClientToken=6A5AA1D4EAFF4E9FB37E23D68491D6F4';

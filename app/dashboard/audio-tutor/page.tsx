@@ -14,7 +14,8 @@ import {
   ChevronLeft,
   VolumeX,
   FastForward,
-  Rewind
+  Rewind,
+  Info
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -31,6 +32,22 @@ export default function AudioTutorPage() {
   const [script, setScript] = useState<string | null>(null);
   const [scriptMetadata, setScriptMetadata] = useState<any[]>([]);
   const [currentWordIndex, setCurrentWordIndex] = useState<number>(-1);
+  const [showExamples, setShowExamples] = useState(true);
+
+  const examples = [
+    {
+      title: "সরণ ও ভেক্টর",
+      text: "পদাথর্িবজ্ঞান – অধ,ায় ২ – গিত\nেভক্টর রািশ\nধেরা, তুিম 4m ব,াসােধর্র একিট বৃত্ত াকার পেথ 4 বার ঘুরেল এবং েযখান েথেকশ‌ুরু কের িছেল েসখােনই থামেল এরপর েতামােক যিদ িজেজ্ঞস করা হয় েতামার সরণ কতটুকু হেয়েছ? তুিম বলেব আিম 100 m অিতকৰ্ম কের েফেলিছ। িকন্তু মজার ব,াপার হেচ্ছ , েতামার অিতকৰ্ান্ত দুরতব্ 100 m হেলও সরণ 0। কারণ, েকােনা বস্তুর আিদ অবস্থান ও েশষ অবস্থােনর মধ,বতর্ী নূন,তম দূরতব্ অথর্াৎ সরলৈরিখক দুরতব্ ই হেচ্ছ সরেণর মান এবং সরেণর িদক হেচ্ছ বস্তুর আিদ অবস্থান েথেক েশষ অবস্থােনর িদেক। বৃত্ত াকার পেথ ঘুের আবার একই অবস্থােন আসেল েতামার আিদ ও অন্ত অবস্থান একই। তাই নয় িক বন্ধু রা? সরেণর মা'া হেলা *দেঘ-র মা'া। .যেহতু সরণ একিট িনিদর্ষ্ট িদক বরাবর সংঘিটত হয় তাই সরণ েভক্টর রািশ।"
+    },
+    {
+      title: "নিউটনের ৩য় সূত্র",
+      text: "নিউটনের গতির তৃতীয় সূত্রটি হলো: 'প্রত্যেক ক্রিয়ারই একটি সমান ও বিপরীত প্রতিক্রিয়া আছে।' এর মানে হলো, যখন একটি বস্তু অন্য একটি বস্তুর ওপর বল প্রয়োগ করে, তখন দ্বিতীয় বস্তুটিও প্রথম বস্তুর ওপর ঠিক একই পরিমাণ বল বিপরীত দিকে প্রয়োগ করে। যেমন- তুমি যখন মেঝের ওপর হাঁটো, তুমি তোমার পা দিয়ে মেঝেতে পেছন দিকে ধাক্কা দাও (ক্রিয়া), আর মেঝে তোমাকে সমান বলে সামনের দিকে এগিয়ে দেয় (প্রতিক্রিয়া)।"
+    },
+    {
+      title: "পরমাণুর গঠন",
+      text: "পরমাণু হলো পদার্থের ক্ষুদ্রতম কণা। একটি পরমাণুর কেন্দ্রে থাকে নিউক্লিয়াস, যেখানে প্রোটন এবং নিউট্রন অবস্থান করে। প্রোটন ধনাত্মক আধানযুক্ত এবং নিউট্রন আধানহীন। নিউক্লিয়াসের চারদিকে নির্দিষ্ট কক্ষপথে ইলেকট্রনগুলো ঘুরতে থাকে। ইলেকট্রন ঋণাত্মক আধানযুক্ত। প্রোটন এবং ইলেকট্রনের সংখ্যা সমান থাকে বলেই পরমাণু সামগ্রিকভাবে আধানহীন বা নিরপেক্ষ হয়।"
+    }
+  ];
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
@@ -225,7 +242,7 @@ export default function AudioTutorPage() {
                 <span className="text-xs text-slate-400">{text.length} ক্যারেক্টার</span>
               </div>
 
-              <textarea
+                <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="এখানে বইয়ের অংশ বা আপনার প্রশ্ন লিখুন যা শিক্ষা ভাই বুঝিয়ে বলবে..."
@@ -233,7 +250,28 @@ export default function AudioTutorPage() {
                 disabled={isGenerating}
               />
 
-              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-end">
+              {showExamples && !text && (
+                <div className="px-5 pb-5 flex flex-wrap gap-2">
+                  <p className="w-full text-xs text-slate-400 mb-1 font-medium">নিচের উদাহরণগুলো ট্রাই করুন:</p>
+                  {examples.map((ex, i) => (
+                    <button
+                      key={i}
+                      onClick={() => setText(ex.text)}
+                      className="px-3 py-1.5 bg-white border border-slate-200 text-xs text-indigo-600 rounded-lg hover:border-indigo-300 hover:bg-indigo-50 transition-all font-medium"
+                    >
+                      {ex.title}
+                    </button>
+                  ))}
+                </div>
+              )}
+
+              <div className="p-4 bg-slate-50 border-t border-slate-100 flex justify-between items-center">
+                <button
+                  onClick={() => setText('')}
+                  className="text-xs text-slate-400 hover:text-red-400 font-medium transition-colors"
+                >
+                  Clear Text
+                </button>
                 <button
                   onClick={handleGenerate}
                   disabled={!text.trim() || isGenerating}
@@ -267,8 +305,11 @@ export default function AudioTutorPage() {
             {/* Player Card */}
             <div className={`bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-100 transition-all ${!audioUrl && 'opacity-50 grayscale pointer-events-none'}`}>
               <div className="flex items-center justify-between mb-8">
-                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md">
-                  <Sparkles className="w-5 h-5" />
+                <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md relative group cursor-help">
+                  <Info className="w-5 h-5" />
+                  <div className="absolute bottom-full left-0 mb-2 w-48 p-2 bg-slate-900/90 text-[10px] text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none backdrop-blur-sm border border-white/10 shadow-xl z-50">
+                    The audio is played using no external services! It uses the Edge-TTS (Neural Engine) protocol in real-time.
+                  </div>
                 </div>
                 <div className="bg-white/10 px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase backdrop-blur-md">
                   Neural HQ Audio
@@ -345,19 +386,6 @@ export default function AudioTutorPage() {
                 )}
               </div>
             </div>
-
-            {/* Script Display */}
-            {script && (
-              <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-                <h4 className="font-bold text-slate-900 mb-4 flex items-center gap-2">
-                  <div className="w-1.5 h-4 bg-indigo-600 rounded-full" />
-                  শিক্ষা ভাই-এর স্ক্রিপ্ট
-                </h4>
-                <div className="text-slate-600 text-sm leading-relaxed whitespace-pre-wrap max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                  {renderScript()}
-                </div>
-              </div>
-            )}
           </div>
         </div>
       </main>
