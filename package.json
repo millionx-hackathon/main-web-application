@@ -12,6 +12,7 @@
     "@clerk/nextjs": "^6.36.4",
     "@reduxjs/toolkit": "^2.11.2",
     "@types/react-pdf": "^7.0.0",
+    "@types/uuid": "^11.0.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
     "lucide-react": "^0.562.0",
@@ -24,13 +25,16 @@
     "react-pdf": "^10.2.0",
     "react-redux": "^9.2.0",
     "redux-persist": "^6.0.0",
-    "tailwind-merge": "^3.4.0"
+    "tailwind-merge": "^3.4.0",
+    "uuid": "^13.0.0",
+    "ws": "^8.18.3"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.1",
     "eslint": "^9",
     "eslint-config-next": "16.1.0",
     "tailwindcss": "^4",

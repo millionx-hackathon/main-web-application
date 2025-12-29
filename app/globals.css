@@ -270,3 +270,11 @@
 .animation-delay-4000 {
   animation-delay: 4s;
 }
+@keyframes progress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
+.animate-progress {
+  animation: progress 60s linear forwards;
+}
