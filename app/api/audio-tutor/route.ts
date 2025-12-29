@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { EdgeTTS } from 'node-edge-tts';
-import { promises as fs } from 'fs';
-import path from 'path';
+import { EdgeTTS } from 'edge-tts-universal';
 import { v4 as uuidv4 } from 'uuid';
 
 const GLM_API_URL = 'https://api.z.ai/api/paas/v4/chat/completions';
@@ -26,8 +24,8 @@ You are **"Shikkha Bhai"**, a brilliant and charismatic mentor for Bangladeshi s
 - **Bengali & English Mixed:** Use English academic terms (e.g., "Momentum") alongside Bengali explanations.
 
 ## Length & Depth:
-- **IMPORTANT:** Provide a LONG and DETAILED explanation. Aim for **600-800 words**. Cover the topic thoroughly so the student doesn't have any doubts left.
-- If the content is short, expand on the background and implications of the topic.
+- **IMPORTANT:** Keep it CONCISE. Aim for **200-300 words** (under 2 minutes of audio).
+- Focus on the core concept with one brilliant analogy. Don't over-explain.
 
 ## Output:
 ONLY the Bengali script. No titles, no "Script:", no translation.`;
@@ -72,58 +70,36 @@ interface AudioMetadata {
 }
 
 async function synthesizeSpeech(text: string): Promise<{ audio: Buffer; metadata: AudioMetadata[] }> {
-    const tempId = uuidv4();
-    const tempDir = path.join('/tmp', 'audio-tutor');
-    const tempFile = path.join(tempDir, `${tempId}.mp3`);
-    const metaFile = path.join(tempDir, `${tempId}.json`);
-
     try {
-        // Ensure temp directory exists
-        await fs.mkdir(tempDir, { recursive: true });
+        console.log('Using edge-tts-universal with DRM handling...');
 
-        // Use node-edge-tts library (handles Sec-MS-GEC automatically)
-        const tts = new EdgeTTS({
-            voice: VOICE,
-            lang: 'bn-BD',
-            outputFormat: 'audio-24khz-96kbitrate-mono-mp3',
-            saveSubtitles: true,
-            timeout: 30000
+        // Use edge-tts-universal which has built-in DRM/Sec-MS-GEC handling
+        const tts = new EdgeTTS(text, VOICE, {
+            rate: '+0%',
+            volume: '+0%',
+            pitch: '+0Hz',
         });
 
-        await tts.ttsPromise(text, tempFile);
+        const result = await tts.synthesize();
 
-        // Read the generated audio file
-        const audioBuffer = await fs.readFile(tempFile);
+        // Get audio buffer
+        const audioBuffer = Buffer.from(await result.audio.arrayBuffer());
 
-        // Read subtitles/metadata if available
-        let metadata: AudioMetadata[] = [];
-        try {
-            const subtitlesRaw = await fs.readFile(metaFile, 'utf-8');
-            const subtitles = JSON.parse(subtitlesRaw) as { part: string; start: number; end: number }[];
-            metadata = subtitles.map((s) => ({
-                Type: 'WordBoundary',
-                Data: {
-                    Offset: s.start * 10000, // Convert ms to ticks
-                    Duration: (s.end - s.start) * 10000,
-                    text: { Text: s.part.trim() }
-                }
-            }));
-        } catch {
-            // Subtitles not available, continue without metadata
-        }
+        // Convert subtitle data to our metadata format
+        const metadata: AudioMetadata[] = result.subtitle.map((sub) => ({
+            Type: 'WordBoundary',
+            Data: {
+                Offset: sub.offset,
+                Duration: sub.duration,
+                text: { Text: sub.text }
+            }
+        }));
 
-        // Cleanup temp files
-        await fs.unlink(tempFile).catch(() => { });
-        await fs.unlink(metaFile).catch(() => { });
-
+        console.log(`Edge TTS success: ${audioBuffer.length} bytes, ${metadata.length} word boundaries`);
         return { audio: audioBuffer, metadata };
 
     } catch (error) {
-        console.warn('Edge TTS (node-edge-tts) failed, using fallback Google TTS:', error);
-
-        // Cleanup any partial files
-        await fs.unlink(tempFile).catch(() => { });
-        await fs.unlink(metaFile).catch(() => { });
+        console.warn('Edge TTS (edge-tts-universal) failed, using fallback Google TTS:', error);
 
         // Google TTS fallback - split text into chunks and concatenate
         const chunks: string[] = [];
@@ -182,7 +158,7 @@ export async function POST(request: NextRequest) {
         console.log('Generating friendly script...');
         const script = await generateScript(text, chapterTitle || 'General Topic', apiKey);
 
-        console.log('Synthesizing speech with node-edge-tts...');
+        console.log('Synthesizing speech with edge-tts-universal...');
         const { audio, metadata } = await synthesizeSpeech(script);
 
         // Convert audio buffer to base64
