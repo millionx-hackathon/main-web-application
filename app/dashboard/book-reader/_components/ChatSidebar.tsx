@@ -606,7 +606,11 @@ export default function ChatSidebar({
             </div>
 
             <button
-              onClick={() => router.push('/dashboard/audio-tutor')}
+              onClick={() => {
+                const searchParams = new URLSearchParams();
+                if (pageText) searchParams.set('context', pageText);
+                router.push(`/dashboard/audio-tutor?${searchParams.toString()}`);
+              }}
               className="w-full mt-3 py-1.5 border border-indigo-100 text-[10px] font-bold text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
             >
               ফুল টিউটর পেজ খুলুন →

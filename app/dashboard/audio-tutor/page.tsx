@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import {
   Headphones,
   Play,
@@ -17,10 +17,11 @@ import {
   Rewind,
   Info
 } from 'lucide-react';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function AudioTutorPage() {
+function AudioTutorContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [text, setText] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [audioUrl, setAudioUrl] = useState<string | null>(null);
@@ -52,6 +53,13 @@ export default function AudioTutorPage() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const wordRefs = useRef<(HTMLSpanElement | null)[]>([]);
 
+  useEffect(() => {
+    const context = searchParams.get('context');
+    if (context) {
+      setText(context);
+    }
+  }, [searchParams]);
+
   const handleGenerate = async () => {
     if (!text.trim() || isGenerating) return;
 
@@ -81,7 +89,6 @@ export default function AudioTutorPage() {
       setScript(data.script);
       setScriptMetadata(data.metadata || []);
 
-      // Convert base64 to blob
       const binaryString = atob(data.audio);
       const bytes = new Uint8Array(binaryString.length);
       for (let i = 0; i < binaryString.length; i++) {
@@ -118,16 +125,14 @@ export default function AudioTutorPage() {
       const timeInTicks = audioRef.current.currentTime * 10000000;
       setCurrentTime(audioRef.current.currentTime);
 
-      // Find current word from metadata
       if (scriptMetadata.length > 0) {
         const currentWord = scriptMetadata.findIndex(meta =>
           meta.Type === 'WordBoundary' &&
           timeInTicks >= meta.Data.Offset &&
-          timeInTicks <= (meta.Data.Offset + meta.Data.Duration + 2000000) // Add slight buffer
+          timeInTicks <= (meta.Data.Offset + meta.Data.Duration + 2000000)
         );
         if (currentWord !== -1 && currentWord !== currentWordIndex) {
           setCurrentWordIndex(currentWord);
-          // Auto scroll to current word
           wordRefs.current[currentWord]?.scrollIntoView({
             behavior: 'smooth',
             block: 'center',
@@ -173,11 +178,8 @@ export default function AudioTutorPage() {
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   };
 
-  // Helper to render highlighted script
   const renderScript = () => {
     if (!script) return null;
-
-    // If no metadata, just show text
     if (scriptMetadata.length === 0) return script;
 
     const words = scriptMetadata.filter(m => m.Type === 'WordBoundary');
@@ -206,7 +208,6 @@ export default function AudioTutorPage() {
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans pb-20">
-      {/* Header */}
       <div className="bg-white border-b border-slate-200 sticky top-0 z-30">
         <div className="max-w-4xl mx-auto px-4 h-16 flex items-center justify-between">
           <button
@@ -223,15 +224,12 @@ export default function AudioTutorPage() {
             </div>
             <h1 className="font-bold text-slate-900 hidden sm:block">শিক্ষা ভাই - Audio Tutor</h1>
           </div>
-
-          <div className="w-10" /> {/* Spacer */}
+          <div className="w-10" />
         </div>
       </div>
 
       <main className="max-w-4xl mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-
-          {/* Left Column: Input */}
           <div className="lg:col-span-7 space-y-6">
             <div className="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
               <div className="p-4 border-b border-slate-100 bg-slate-50/50 flex items-center justify-between">
@@ -242,7 +240,7 @@ export default function AudioTutorPage() {
                 <span className="text-xs text-slate-400">{text.length} ক্যারেক্টার</span>
               </div>
 
-                <textarea
+              <textarea
                 value={text}
                 onChange={(e) => setText(e.target.value)}
                 placeholder="এখানে বইয়ের অংশ বা আপনার প্রশ্ন লিখুন যা শিক্ষা ভাই বুঝিয়ে বলবে..."
@@ -300,9 +298,7 @@ export default function AudioTutorPage() {
             )}
           </div>
 
-          {/* Right Column: Player & Script */}
           <div className="lg:col-span-5 space-y-6">
-            {/* Player Card */}
             <div className={`bg-gradient-to-br from-indigo-600 to-purple-700 rounded-3xl p-6 text-white shadow-xl shadow-indigo-100 transition-all ${!audioUrl && 'opacity-50 grayscale pointer-events-none'}`}>
               <div className="flex items-center justify-between mb-8">
                 <div className="p-2 bg-white/20 rounded-xl backdrop-blur-md relative group cursor-help">
@@ -327,7 +323,6 @@ export default function AudioTutorPage() {
                 <p className="text-indigo-100 text-xs opacity-80">Storytelling Explanation</p>
               </div>
 
-              {/* Progress Slider */}
               <div className="space-y-2 mb-8">
                 <input
                   type="range"
@@ -343,7 +338,6 @@ export default function AudioTutorPage() {
                 </div>
               </div>
 
-              {/* Controls */}
               <div className="flex items-center justify-center gap-6">
                 <button
                   onClick={() => {if(audioRef.current) audioRef.current.currentTime -= 10}}
@@ -418,5 +412,13 @@ export default function AudioTutorPage() {
         }
       `}</style>
     </div>
+  );
+}
+
+export default function AudioTutorPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-slate-50 flex items-center justify-center">Loading Audio Tutor...</div>}>
+      <AudioTutorContent />
+    </Suspense>
   );
 }

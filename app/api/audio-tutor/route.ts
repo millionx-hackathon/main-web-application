@@ -10,18 +10,22 @@ const EDGE_TTS_URL = 'wss://speech.platform.bing.com/consumer/speech/synthesize/
 const VOICE = 'bn-BD-PradeepNeural';
 
 async function generateScript(text: string, chapterTitle: string, apiKey: string): Promise<string> {
-    const systemPrompt = `# Shikkha Bhai - Vernacular Audio Tutor Scriptwriter
+    const systemPrompt = `# Shikkha Bhai (শিক্ষা ভাই) - The Ultimate Vernacular AI Tutor
 
-তুমি হলে **Shikkha Bhai**, বাংলাদেশের ৯ম-১০ম শ্রেণির শিক্ষার্থীদের একজন বন্ধুসুলভ বড় ভাই। তোমার কাজ হলো পাঠ্যবইয়ের কঠিন বিষয়বস্তুকে অত্যন্ত সহজ, আনন্দদায়ক এবং গল্পের মতো করে উপস্থাপন করা।
+You are **"Shikkha Bhai"**, a brilliant and charismatic mentor for Bangladeshi secondary school students (Class 9-12). Your superpower is taking complex, dry textbook concepts and turning them into "Aha!" moments through relatable storytelling and professional yet friendly guidance.
 
-## তোমার স্ক্রিপ্ট লেখার নিয়ম:
-1. **সম্বোধন:** শুরু করো "সালাম বন্ধুরা!" বা "কিরে বন্ধুরা, কী খবর?" দিয়ে।
-2. **গল্পের ছলে ব্যাখ্যা:** পাঠ্যবইয়ের হুবহু লাইন পড়বে না। বরং বিষয়টা বুঝিয়ে বলবে।
-3. **স্মার্ট ঢং:** প্রমিত বাংলার সাথে সামান্য কিছু ঘরোয়া শব্দ যোগ করতে পারো যেন মনে হয় একজন বড় ভাই বোঝাচ্ছে।
-4. **উদাহরণ:** প্রতিদিনের জীবনের উদাহরণ দাও।
-5. **দৈর্ঘ্য:** স্ক্রিপ্টটি যেন ২-৩ মিনিটের বেশি না হয় (প্রায় ২৫০-৩৫০ শব্দ)।
+## Your Tone & Style:
+1. **Direct Professionalism:** You are a vision of a modern, well-educated mentor. Your language is refined, using standard Bengali (**চলিত বাংলা**).
+2. **No Fluff Intro:** Do NOT spend time on long greetings or introductory fillers. Start immediately with the core concept or a compelling academic hook related to the context. Example: "প্রিয় শিক্ষার্থীরা, আজকে আমরা আলোচনা করব [Topic Name] নিয়ে, যা আমাদের চারপাশের জগতের এক বিস্ময়কর ভিত্তি।" Don't directly use the example! Use similer better professional
+3. **Immediate Intellectual Depth:** Dive straight into the core logic. Explain why this specific concept matters from the very first sentence.
+4. **Articulate Analogies:** Use precise, sophisticated analogies integrated into the explanation.
+5. **Structural Integrity:** Use transition phrases that guide the student through a journey of discovery (e.g., "প্রথমেই আমরা লক্ষ্য করি...", "এর পেছনে গাণিতিক যুক্তিটি হলো...", "বিষয়টিকে যদি আমরা একটু ভিন্নভাবে দেখি...").
+6. **Concise Outro:** Conclude with a strong, focused summary that reinforces the key takeaway. Avoid long sign-offs.
 
-শুধুমাত্র বাংলায় লেখা স্ক্রিপ্টটি দাও।`;
+## Output Requirements:
+- Write ONLY in Bengali.
+- Length: 250-400 words (Approx. 2.5 minutes of speech).
+- Format: A continuous, engaging narrative script.`;
 
     const userMessage = `অধ্যায়: ${chapterTitle || 'বিজ্ঞান'}
 পাঠ্যবইয়ের বিষয়বস্তু:
@@ -74,7 +78,7 @@ async function synthesizeSpeech(text: string): Promise<{ audio: Buffer; metadata
         const requestId = uuidv4().replace(/-/g, '');
 
         ws.on('open', () => {
-            const configMsg = `Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},"outputFormat":"audio-24khz-48kbitrate-mono-mp3"}}}}`;
+            const configMsg = `Content-Type:application/json; charset=utf-8\r\nPath:speech.config\r\n\r\n{"context":{"synthesis":{"audio":{"metadataoptions":{"sentenceBoundaryEnabled":"false","wordBoundaryEnabled":"true"},"outputFormat":"audio-24khz-96kbitrate-mono-mp3"}}}}`;
             ws.send(configMsg);
 
             const escapedText = escapeXml(text);
@@ -88,11 +92,22 @@ async function synthesizeSpeech(text: string): Promise<{ audio: Buffer; metadata
                 if (buffer.length > 2) {
                     const headerLength = buffer.readInt16BE(0);
                     const header = buffer.slice(2, 2 + headerLength).toString();
-                    const payload = buffer.slice(headerLength + 12);
+                    const payload = buffer.slice(2 + headerLength);
 
-                    if (header.includes('Path:audio\r\n')) {
-                        audioData = Buffer.concat([audioData, payload]);
-                    } else if (header.includes('Path:audio.metadata\r\n')) {
+                    // Robust path detection
+                    if (header.toLowerCase().includes('path:audio')) {
+                        // Edge TTS binary audio packets often start with a binary preamble
+                        // that isn't part of the MP3 stream. We skip until we find the
+                        // MP3 sync byte 0xFF.
+                        let syncOffset = 0;
+                        while (syncOffset < payload.length && payload[syncOffset] !== 0xFF) {
+                            syncOffset++;
+                        }
+
+                        if (syncOffset < payload.length) {
+                            audioData = Buffer.concat([audioData, payload.slice(syncOffset)]);
+                        }
+                    } else if (header.toLowerCase().includes('path:audio.metadata')) {
                         try {
                             const meta = JSON.parse(payload.toString());
                             if (meta.Metadata) {
