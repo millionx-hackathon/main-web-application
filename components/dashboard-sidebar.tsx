@@ -22,6 +22,7 @@ import {
   ChevronRight,
   Menu,
   PanelLeft,
+  Headphones,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -57,9 +58,14 @@ const navigationItems: NavItem[] = [
 
 const strategyItems: NavItem[] = [
   {
-    title: "বই পড়ুন",
+    title: "বই পড়ুন",
     href: "/dashboard/book-reader",
     icon: FileText,
+  },
+  {
+    title: "শিক্ষা ভাই (Audio)",
+    href: "/dashboard/audio-tutor",
+    icon: Headphones,
   },
   {
     title: "কুইজ টেস্ট",

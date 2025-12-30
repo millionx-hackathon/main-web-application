@@ -24,6 +24,10 @@ export default function LiveCallPage() {
 
   const scrollRef = useRef<HTMLDivElement>(null);
 
+  const addMessage = (role: 'ai' | 'user', text: string) => {
+    setTranscript(prev => [...prev, { role, text }]);
+  };
+
   // Timer Logic
   useEffect(() => {
     let interval: NodeJS.Timeout;
@@ -158,10 +162,6 @@ export default function LiveCallPage() {
         timers.forEach(t => clearTimeout(t));
     };
   }, []);
-
-  const addMessage = (role: 'ai' | 'user', text: string) => {
-      setTranscript(prev => [...prev, { role, text }]);
-  };
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -330,7 +330,7 @@ export default function LiveCallPage() {
             {status === 'talking' && (
                 <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-64 h-24 flex items-center justify-center gap-1">
                     {[1,2,3,4,5].map(i => (
-                        <div key={i} className="w-1 bg-white/50 rounded-full animate-[bounce_1s_infinite]" style={{ height: `${Math.random() * 40 + 20}px`, animationDelay: `${i * 0.1}s` }}></div>
+                        <div key={i} className="w-1 bg-white/50 rounded-full animate-[bounce_1s_infinite]" style={{ height: `${(i * 7 + 20) % 40 + 20}px`, animationDelay: `${i * 0.1}s` }}></div>
                     ))}
                 </div>
             )}

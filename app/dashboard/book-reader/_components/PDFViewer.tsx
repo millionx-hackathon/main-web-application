@@ -23,6 +23,7 @@ interface PDFViewerProps {
   isHighlighted?: boolean;
   onTotalPagesChange?: (totalPages: number) => void;
   textHighlights?: TextHighlight[];
+  onPageTextExtracted?: (pageNumber: number, text: string) => void;
 }
 
 export default function PDFViewer({
@@ -34,7 +35,9 @@ export default function PDFViewer({
   isHighlighted = false,
   onTotalPagesChange,
   textHighlights = [],
+  onPageTextExtracted,
 }: PDFViewerProps) {
+  const [pdfDocument, setPdfDocument] = useState<pdfjs.PDFDocumentProxy | null>(null);
   const [numPages, setNumPages] = useState<number>(0);
   const [scale, setScale] = useState(1.2);
   const [loading, setLoading] = useState(true);
@@ -42,12 +45,39 @@ export default function PDFViewer({
   const pageRef = useRef<HTMLDivElement>(null);
   const [isTurning, setIsTurning] = useState(false);
 
-  const onDocumentLoadSuccess = ({ numPages }: { numPages: number }) => {
-    setNumPages(numPages);
+  const onDocumentLoadSuccess = (pdf: pdfjs.PDFDocumentProxy) => {
+    setNumPages(pdf.numPages);
+    setPdfDocument(pdf);
     setLoading(false);
     setError(null);
-    onTotalPagesChange?.(numPages);
+    onTotalPagesChange?.(pdf.numPages);
   };
+
+  // Extract text from current page when page changes
+  useEffect(() => {
+    const extractPageText = async () => {
+      if (!pdfDocument || !onPageTextExtracted) return;
+
+      try {
+        const page = await pdfDocument.getPage(currentPage);
+        const textContent = await page.getTextContent();
+        const text = textContent.items
+          .map((item) => {
+            const it = item as { str?: string };
+            return it.str || '';
+          })
+          .join(' ')
+          .replace(/\s+/g, ' ')
+          .trim();
+
+        onPageTextExtracted(currentPage, text);
+      } catch (error) {
+        console.error('Error extracting page text:', error);
+      }
+    };
+
+    extractPageText();
+  }, [pdfDocument, currentPage, onPageTextExtracted]);
 
   const onDocumentLoadError = (error: Error) => {
     setError('PDF লোড করতে সমস্যা হয়েছে');

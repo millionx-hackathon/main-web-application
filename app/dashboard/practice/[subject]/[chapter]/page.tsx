@@ -72,9 +72,11 @@ export default function PracticeSessionPage() {
       );
 
       if (nextQ && currentSession.questions.length < 10) {
-        setCurrentQuestion(nextQ);
-        setQuestionStartTime(Date.now());
-        setTimeElapsed(Math.floor((Date.now() - currentSession.startTime) / 1000));
+        setTimeout(() => {
+          setCurrentQuestion(nextQ);
+          setQuestionStartTime(Date.now());
+          setTimeElapsed(Math.floor((Date.now() - currentSession.startTime!) / 1000));
+        }, 0);
       } else if (currentSession.questions.length >= 10) {
         // Session was completed but not finalized
         const rec = generateRecommendations(currentSession.metrics, currentSession.difficulty);

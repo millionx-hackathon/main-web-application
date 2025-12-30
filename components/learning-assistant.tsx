@@ -20,11 +20,8 @@ export function LearningAssistant() {
   const inputRef = useRef<HTMLInputElement>(null);
   const pathname = usePathname();
 
-  // Hide on book-reader pages
+  // Hide on book-reader pages - check AFTER all hooks are declared
   const isBookReaderPage = pathname?.includes('/book-reader');
-  if (isBookReaderPage) {
-    return null;
-  }
 
   useEffect(() => {
     if (isOpen && inputRef.current) {
@@ -36,7 +33,12 @@ export function LearningAssistant() {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  const handleSend = async () => {
+  // Early return AFTER all hooks are declared
+  if (isBookReaderPage) {
+    return null;
+  }
+
+    const handleSend = async () => {
     if (!input.trim() || isTyping) return;
 
     const userMessage = {
@@ -50,17 +52,48 @@ export function LearningAssistant() {
     setInput('');
     setIsTyping(true);
 
-    // Simulate AI response (replace with actual API call)
-    setTimeout(() => {
-      const assistantMessage = {
-        id: (Date.now() + 1).toString(),
+    try {
+      const response = await fetch('/api/reader-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: userMessage.content,
+          contextItems: [],
+          currentPage: 0,
+          chapterTitle: 'General Support',
+          chapterId: 'general',
+          bookId: 'general-assistant',
+          chatHistory: messages.map(m => ({ role: m.role, content: m.content })),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        const assistantMessage = {
+          id: Date.now().toString(),
+          role: 'assistant' as const,
+          content: data.response,
+          timestamp: new Date(),
+        };
+        setMessages((prev) => [...prev, assistantMessage]);
+      } else {
+        throw new Error(data.error || 'Failed to get response');
+      }
+    } catch (error) {
+      console.error('Learning Assistant Error:', error);
+      const errorMessage = {
+        id: Date.now().toString(),
         role: 'assistant' as const,
-        content: 'এটি একটি ডেমো প্রতিক্রিয়া। আসন্ন আপডেটে AI চ্যাটবট সংযুক্ত করা হবে।',
+        content: 'দুঃখিত, আমি এই মুহূর্তে উত্তর দিতে পারছি না। অনুগ্রহ করে আবার চেষ্টা করুন।',
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, assistantMessage]);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
       setIsTyping(false);
-    }, 1000);
+    }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {

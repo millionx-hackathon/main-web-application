@@ -2,7 +2,8 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
-import { X, Send, Loader2, Sparkles, FileQuestion, Trash2, Copy, Check } from 'lucide-react';
+import { X, Send, Loader2, Sparkles, FileQuestion, Trash2, Copy, Check, Headphones, Play, Pause, RotateCcw, Volume2, Info } from 'lucide-react';
+import ReactMarkdown from 'react-markdown';
 import StreamingMessage from './StreamingMessage';
 import QuizGenerator from './QuizGenerator';
 import { getPageQuestions, getRandomSuggestion, PageQuestion } from '@/app/dashboard/book-reader/_data/pageQuestions';
@@ -25,6 +26,7 @@ interface ChatSidebarProps {
   chapterId?: string;
   bookId?: string;
   pdfScale?: number;
+  pageText?: string; // Extracted text from current PDF page
   onClearContext: () => void;
   onAddContext?: (text: string, page: number) => void;
 }
@@ -38,6 +40,7 @@ export default function ChatSidebar({
   chapterId = 'ch1',
   bookId,
   pdfScale = 1.2,
+  pageText,
   onClearContext,
   onAddContext,
 }: ChatSidebarProps) {
@@ -52,6 +55,14 @@ export default function ChatSidebar({
   const [copiedId, setCopiedId] = useState<string | null>(null);
   const [lastLoadedPage, setLastLoadedPage] = useState<number | null>(null);
   const [showQuizGenerator, setShowQuizGenerator] = useState(false);
+  const [isAudioLoading, setIsAudioLoading] = useState(false);
+  const [audioUrl, setAudioUrl] = useState<string | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [audioError, setAudioError] = useState<string | null>(null);
+  const [audioScript, setAudioScript] = useState<string | null>(null);
+  const [audioDuration, setAudioDuration] = useState(0);
+  const [audioProgress, setAudioProgress] = useState(0);
+  const audioRef = useRef<HTMLAudioElement | null>(null);
   const router = useRouter();
 
   // Listen for askAI events
@@ -62,13 +73,13 @@ export default function ChatSidebar({
       }
     };
 
-    window.addEventListener('askAI' as any, handleAskAI as EventListener);
+    window.addEventListener('askAI' as keyof WindowEventMap, handleAskAI as EventListener);
     return () => {
-      window.removeEventListener('askAI' as any, handleAskAI as EventListener);
+      window.removeEventListener('askAI' as keyof WindowEventMap, handleAskAI as EventListener);
     };
   }, [currentPage, chapterTitle]);
 
-  const handleAskAIQuestion = (text: string) => {
+  const handleAskAIQuestion = async (text: string) => {
     const questionMessage: Message = {
       id: Date.now().toString(),
       role: 'user',
@@ -79,31 +90,77 @@ export default function ChatSidebar({
     setIsLoading(true);
     setSuggestedQuestions([]);
 
-    // Generate response text
-    const responseText = `আপনার নির্বাচিত অংশটি ${chapterTitle} অধ্যায়ের একটি গুরুত্বপূর্ণ বিষয় নির্দেশ করে।\n\nএই অংশে আলোচিত বিষয়টি পদার্থবিজ্ঞানের ইতিহাস এবং এর বিকাশের সাথে সম্পর্কিত। এটি দেখায় যে কীভাবে বিজ্ঞানীরা সময়ের সাথে সাথে বিভিন্ন পরিমাপ এবং পর্যবেক্ষণের মাধ্যমে পদার্থবিজ্ঞানের জ্ঞান বৃদ্ধি করেছেন।\n\nএই ধারণাটি বোঝার জন্য:\n• ঐতিহাসিক প্রেক্ষাপট বুঝতে হবে\n• পরিমাপের গুরুত্ব অনুধাবন করতে হবে\n• বিজ্ঞানের ক্রমবিকাশ সম্পর্কে জানতে হবে\n\nআপনি যদি এই বিষয়ের কোনো নির্দিষ্ট দিক সম্পর্কে জানতে চান, তাহলে আমাকে জিজ্ঞাসা করুন।`;
+    // Build context with the selected text
+    const selectedContext = [{ text, page: currentPage }];
 
-    // Add streaming message
-    const aiMessageId = (Date.now() + 1).toString();
-    const aiMessage: Message = {
-      id: aiMessageId,
-      role: 'assistant',
-      content: responseText,
-      quotes: [{ text, page: currentPage }],
-      timestamp: new Date(),
-      isStreaming: true,
-    };
-    setMessages(prev => [...prev, aiMessage]);
+    try {
+      const response = await fetch('/api/reader-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: `এই অংশটি ব্যাখ্যা করুন: "${text}"`,
+          contextItems: selectedContext,
+          currentPage,
+          chapterTitle,
+          chapterId,
+          bookId,
+          pageText, // Include extracted PDF page text
+          chatHistory: [],
+        }),
+      });
 
-    // Mark as complete after streaming would finish (approximate)
-    // 1000ms initial delay + text length * 30ms per word + 500ms buffer
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg =>
-        msg.id === aiMessageId
-          ? { ...msg, isStreaming: false }
-          : msg
-      ));
-      setIsLoading(false);
-    }, 1000 + responseText.length * 30 + 500);
+      const data = await response.json();
+
+      const aiMessageId = (Date.now() + 1).toString();
+      const aiMessage: Message = {
+        id: aiMessageId,
+        role: 'assistant',
+        content: data.success ? data.response : (data.error || 'দুঃখিত, উত্তর দিতে সমস্যা হয়েছে।'),
+        quotes: [{ text, page: currentPage }],
+        timestamp: new Date(),
+        isStreaming: data.success,
+      };
+      setMessages(prev => [...prev, aiMessage]);
+
+      if (data.success) {
+        setTimeout(() => {
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessageId
+              ? { ...msg, isStreaming: false }
+              : msg
+          ));
+          setIsLoading(false);
+        }, Math.min(data.response.length * 20, 3000));
+      } else {
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Ask AI Error:', error);
+      // Fallback response
+      const responseText = `আপনার নির্বাচিত অংশটি ${chapterTitle} অধ্যায়ের একটি গুরুত্বপূর্ণ বিষয় নির্দেশ করে।\n\nএই অংশে আলোচিত বিষয়টি পদার্থবিজ্ঞানের ইতিহাস এবং এর বিকাশের সাথে সম্পর্কিত। আপনি যদি এই বিষয়ের কোনো নির্দিষ্ট দিক সম্পর্কে জানতে চান, তাহলে আমাকে জিজ্ঞাসা করুন।`;
+
+      const aiMessageId = (Date.now() + 1).toString();
+      const aiMessage: Message = {
+        id: aiMessageId,
+        role: 'assistant',
+        content: responseText,
+        quotes: [{ text, page: currentPage }],
+        timestamp: new Date(),
+        isStreaming: true,
+      };
+      setMessages(prev => [...prev, aiMessage]);
+
+      setTimeout(() => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === aiMessageId
+            ? { ...msg, isStreaming: false }
+            : msg
+        ));
+        setIsLoading(false);
+      }, 1000 + responseText.length * 30 + 500);
+    }
   };
 
   // Load page context when chat opens or page changes (only if no messages exist)
@@ -183,31 +240,88 @@ export default function ChatSidebar({
     setIsLoading(true);
     setSuggestedQuestions([]);
 
-    // Generate response text
-    const responseText = generateMockResponse(question, contextItems, currentPage, chapterId);
+    // Prepare chat history for context (last 10 messages)
+    const chatHistory = messages.slice(-10).map(msg => ({
+      role: msg.role,
+      content: msg.content,
+    }));
 
-    // Add streaming message
-    const aiMessageId = (Date.now() + 1).toString();
-    const aiMessage: Message = {
-      id: aiMessageId,
-      role: 'assistant',
-      content: responseText,
-      quotes: contextItems.length > 0 ? contextItems.slice(0, 2) : undefined,
-      timestamp: new Date(),
-      isStreaming: true,
-    };
-    setMessages(prev => [...prev, aiMessage]);
+    try {
+      // Call the real AI API
+      const response = await fetch('/api/reader-ai', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          message: question,
+          contextItems,
+          currentPage,
+          chapterTitle,
+          chapterId,
+          bookId,
+          pageText, // Include extracted PDF page text
+          chatHistory,
+        }),
+      });
 
-    // Mark as complete after streaming would finish
-    // 1000ms initial delay + text length * 30ms per word + 500ms buffer
-    setTimeout(() => {
-      setMessages(prev => prev.map(msg =>
-        msg.id === aiMessageId
-          ? { ...msg, isStreaming: false }
-          : msg
-      ));
-      setIsLoading(false);
-    }, 1000 + responseText.length * 30 + 500);
+      const data = await response.json();
+
+      if (data.success && data.response) {
+        // Add AI response
+        const aiMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.response,
+          quotes: contextItems.length > 0 ? contextItems.slice(0, 2) : undefined,
+          timestamp: new Date(),
+          isStreaming: true,
+        };
+        setMessages(prev => [...prev, aiMessage]);
+
+        // Simulate streaming effect then mark complete
+        setTimeout(() => {
+          setMessages(prev => prev.map(msg =>
+            msg.id === aiMessage.id
+              ? { ...msg, isStreaming: false }
+              : msg
+          ));
+          setIsLoading(false);
+        }, Math.min(data.response.length * 20, 3000));
+      } else {
+        // Handle error - show fallback response
+        const errorMessage: Message = {
+          id: (Date.now() + 1).toString(),
+          role: 'assistant',
+          content: data.error || 'দুঃখিত, উত্তর দিতে সমস্যা হয়েছে। অনুগ্রহ করে আবার চেষ্টা করুন।',
+          timestamp: new Date(),
+        };
+        setMessages(prev => [...prev, errorMessage]);
+        setIsLoading(false);
+      }
+    } catch (error) {
+      console.error('Chat API Error:', error);
+      // Fallback to mock response on error
+      const responseText = generateMockResponse(question, contextItems, currentPage, chapterId);
+      const aiMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        role: 'assistant',
+        content: responseText,
+        quotes: contextItems.length > 0 ? contextItems.slice(0, 2) : undefined,
+        timestamp: new Date(),
+        isStreaming: true,
+      };
+      setMessages(prev => [...prev, aiMessage]);
+
+      setTimeout(() => {
+        setMessages(prev => prev.map(msg =>
+          msg.id === aiMessage.id
+            ? { ...msg, isStreaming: false }
+            : msg
+        ));
+        setIsLoading(false);
+      }, 1000 + responseText.length * 30 + 500);
+    }
   };
 
   const handleSuggestedQuestion = (question: string) => {
@@ -236,6 +350,103 @@ export default function ChatSidebar({
       handleSend();
     }
   };
+
+  const handleGenerateAudio = async () => {
+    if (isAudioLoading || !pageText) return;
+
+    setIsAudioLoading(true);
+    setAudioError(null);
+    setAudioUrl(null);
+
+    try {
+      const response = await fetch('/api/audio-tutor', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          text: pageText,
+          chapterTitle: chapterTitle,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate audio');
+      }
+
+      const data = await response.json();
+      setAudioScript(data.script);
+
+      // Convert base64 to blob
+      const binaryString = atob(data.audio);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
+      const blob = new Blob([bytes], { type: 'audio/mpeg' });
+
+      const url = URL.createObjectURL(blob);
+      setAudioUrl(url);
+      // No immediate play() call here, we'll handle it in useEffect
+    } catch (err) {
+      console.error('Audio Tutor Error:', err);
+      setAudioError('দুঃখিত, অডিও তৈরি করতে সমস্যা হয়েছে।');
+    } finally {
+      setIsAudioLoading(false);
+    }
+  };
+
+  const togglePlayback = () => {
+    if (audioRef.current) {
+      if (isPlaying) {
+        audioRef.current.pause();
+      } else {
+        audioRef.current.play();
+      }
+    }
+  };
+
+  const handleTimeUpdate = () => {
+    if (audioRef.current) {
+      setAudioProgress(audioRef.current.currentTime);
+    }
+  };
+
+  const handleLoadedMetadata = () => {
+    if (audioRef.current) {
+      setAudioDuration(audioRef.current.duration);
+    }
+  };
+
+  const handleAudioSeek = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const time = parseFloat(e.target.value);
+    setAudioProgress(time);
+    if (audioRef.current) {
+      audioRef.current.currentTime = time;
+    }
+  };
+
+  const formatAudioTime = (time: number) => {
+    const mins = Math.floor(time / 60);
+    const secs = Math.floor(time % 60);
+    return `${mins}:${secs.toString().padStart(2, '0')}`;
+  };
+
+  useEffect(() => {
+    if (audioUrl && audioRef.current) {
+      audioRef.current.src = audioUrl;
+      audioRef.current.load();
+      audioRef.current.play().catch(e => console.error("Autoplay failed:", e));
+    }
+  }, [audioUrl]);
+
+  useEffect(() => {
+    return () => {
+      if (audioUrl) {
+        URL.revokeObjectURL(audioUrl);
+      }
+    };
+  }, [audioUrl]);
 
   // Calculate font size based on PDF scale (base 14px, scales with PDF zoom)
   // Scale factor: 1.2 (default) = 14px, 2.0 = ~18px, 3.0 = ~20px
@@ -319,6 +530,118 @@ export default function ChatSidebar({
         </div>
       )}
 
+      {/* Audio Tutor Section */}
+      <div className="px-4 py-4 bg-gradient-to-br from-indigo-50/50 to-purple-50/50 border-b border-indigo-100/50">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <div className="p-1.5 bg-indigo-600 rounded-lg text-white">
+              <Headphones className="w-4 h-4" />
+            </div>
+            <div>
+              <p className="text-sm font-bold text-gray-900 leading-tight">শিক্ষা ভাই-এর ব্যাখ্যা</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="text-[10px] text-indigo-600 font-medium uppercase tracking-wider">Audio Tutor</p>
+                  <div className="relative group cursor-help">
+                    <Info className="w-3 h-3 text-indigo-400" />
+                    <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-40 p-2 bg-slate-900/90 text-[9px] text-white rounded-lg opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none backdrop-blur-sm border border-white/10 shadow-xl z-50 normal-case font-normal leading-tight">
+                      The audio is played using no external services! It uses the Edge-TTS protocol.
+                    </div>
+                  </div>
+                </div>
+            </div>
+          </div>
+
+          {!audioUrl && !isAudioLoading && (
+            <button
+              onClick={handleGenerateAudio}
+              className="px-3 py-1.5 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-all shadow-sm hover:shadow-md flex items-center gap-1.5"
+            >
+              <Play className="w-3 h-3 fill-current" />
+              শুনুন
+            </button>
+          )}
+        </div>
+
+        {isAudioLoading && (
+          <div className="flex items-center gap-3 py-2">
+            <div className="flex gap-1">
+              {[0, 150, 300, 450].map((delay) => (
+                <div
+                  key={delay}
+                  className="w-1 h-4 bg-indigo-500 rounded-full animate-bounce"
+                  style={{ animationDelay: `${delay}ms` }}
+                />
+              ))}
+            </div>
+            <p className="text-xs text-indigo-600 font-medium animate-pulse">শিক্ষা ভাই স্ক্রিপ্ট লিখছেন...</p>
+          </div>
+        )}
+
+        {audioUrl && (
+          <div className="bg-white p-3 rounded-xl border border-indigo-100 shadow-sm">
+            <div className="flex items-center gap-3">
+              <button
+                onClick={togglePlayback}
+                className="w-10 h-10 bg-indigo-600 text-white rounded-full flex items-center justify-center hover:scale-105 transition-transform shadow-md"
+              >
+                {isPlaying ? <Pause className="w-5 h-5 fill-current" /> : <Play className="w-5 h-5 fill-current ml-0.5" />}
+              </button>
+
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-[10px] font-bold text-indigo-600 tracking-tighter">NOW PLAYING</span>
+                  <span className="text-[10px] text-gray-400 font-mono">{formatAudioTime(audioProgress)} / {formatAudioTime(audioDuration)}</span>
+                </div>
+
+                {/* Progress bar */}
+                <input
+                  type="range"
+                  min="0"
+                  max={audioDuration || 100}
+                  value={audioProgress}
+                  onChange={handleAudioSeek}
+                  className="w-full h-1 bg-indigo-50 rounded-full appearance-none cursor-pointer accent-indigo-500"
+                />
+              </div>
+            </div>
+
+            <button
+              onClick={() => {
+                if (pageText) {
+                  localStorage.setItem('audio_tutor_context', pageText);
+                }
+                router.push('/dashboard/audio-tutor');
+              }}
+              className="w-full mt-3 py-1.5 border border-indigo-100 text-[10px] font-bold text-indigo-600 rounded-lg hover:bg-indigo-50 transition-colors"
+            >
+              ফুল টিউটর পেজ খুলুন →
+            </button>
+          </div>
+        )}
+
+        <audio
+          ref={audioRef}
+          className="hidden"
+          onTimeUpdate={handleTimeUpdate}
+          onLoadedMetadata={handleLoadedMetadata}
+          onEnded={() => setIsPlaying(false)}
+          onPause={() => setIsPlaying(false)}
+          onPlay={() => setIsPlaying(true)}
+        />
+
+        {audioError && (
+          <div className="mt-2 text-center">
+            <p className="text-xs text-red-500 font-medium">{audioError}</p>
+            <button
+              onClick={handleGenerateAudio}
+              className="text-[10px] text-indigo-600 underline mt-1"
+            >
+              আবার চেষ্টা করুন
+            </button>
+          </div>
+        )}
+      </div>
+
       {/* Suggested Questions */}
       {!pageContextLoading && suggestedQuestions.length > 0 && messages.length === 0 && (
         <div className="px-4 py-3 bg-indigo-50 border-b border-indigo-100">
@@ -368,14 +691,39 @@ export default function ChatSidebar({
               }`}
             >
               {message.isStreaming ? (
-                <p className="whitespace-pre-wrap bengali-text" lang="bn" style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.6' }}>
+                <div className="bengali-text prose prose-sm max-w-none" lang="bn" style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.6' }}>
                   <StreamingMessage
                     content={message.content}
                     isStreaming={true}
                   />
-                </p>
+                </div>
               ) : (
-                <p className="whitespace-pre-wrap bengali-text" lang="bn" style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.6' }}>{message.content}</p>
+                <div
+                  className={`bengali-text prose prose-sm max-w-none ${
+                    message.role === 'user'
+                      ? 'prose-invert'
+                      : 'prose-gray'
+                  }`}
+                  lang="bn"
+                  style={{ fontSize: `${chatFontSize}px`, lineHeight: '1.6' }}
+                >
+                  <ReactMarkdown
+                    components={{
+                      strong: ({ children }) => <strong className="font-bold">{children}</strong>,
+                      em: ({ children }) => <em className="italic">{children}</em>,
+                      ul: ({ children }) => <ul className="list-disc list-inside my-2 space-y-1">{children}</ul>,
+                      ol: ({ children }) => <ol className="list-decimal list-inside my-2 space-y-1">{children}</ol>,
+                      li: ({ children }) => <li className="ml-2">{children}</li>,
+                      p: ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
+                      h1: ({ children }) => <h1 className="text-lg font-bold mb-2">{children}</h1>,
+                      h2: ({ children }) => <h2 className="text-base font-bold mb-2">{children}</h2>,
+                      h3: ({ children }) => <h3 className="text-sm font-bold mb-1">{children}</h3>,
+                      code: ({ children }) => <code className="bg-black/10 px-1 py-0.5 rounded text-sm">{children}</code>,
+                    }}
+                  >
+                    {message.content}
+                  </ReactMarkdown>
+                </div>
               )}
 
               {/* Quotes */}

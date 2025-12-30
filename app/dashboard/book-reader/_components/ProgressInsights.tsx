@@ -32,6 +32,8 @@ export default function ProgressInsights({
     (state) => state.bookReader?.pageSummaries?.[`${bookId}/${chapterId}`] || []
   );
 
+  const [now] = React.useState(() => Date.now());
+
   if (!session) {
     return (
       <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
@@ -64,9 +66,9 @@ export default function ProgressInsights({
   const estimatedHours = Math.floor(estimatedTimeRemaining / 3600);
   const estimatedMinutes = Math.floor((estimatedTimeRemaining % 3600) / 60);
 
-  const lastReadAt = session.lastReadAt || Date.now();
+  const lastReadAt = session.lastReadAt || now;
   const lastReadDate = new Date(lastReadAt);
-  const daysSinceLastRead = Math.floor((Date.now() - lastReadAt) / (1000 * 60 * 60 * 24));
+  const daysSinceLastRead = Math.floor((now - lastReadAt) / (1000 * 60 * 60 * 24));
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>

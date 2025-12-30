@@ -5,9 +5,16 @@ import { GroupSelectionStep } from './_components/GroupSelectionStep';
 import { QuizStep } from './_components/QuizStep';
 import { RecommendationsStep } from './_components/RecommendationsStep';
 
+interface UserData {
+  studentClass: string;
+  group: string;
+  quizScore: number;
+  quizAnswers: Record<string, unknown>;
+}
+
 export default function OnboardingPage() {
   const [step, setStep] = useState(1);
-  const [userData, setUserData] = useState({
+  const [userData, setUserData] = useState<UserData>({
     studentClass: '',
     group: '',
     quizScore: 0,
@@ -32,7 +39,7 @@ export default function OnboardingPage() {
     setStep(3); // Go to Quiz
   };
 
-  const handleQuizFinish = (score: number, answers: any) => {
+  const handleQuizFinish = (score: number, answers: Record<string, unknown>) => {
     setUserData(prev => ({ ...prev, quizScore: score, quizAnswers: answers }));
     setStep(4); // Go to Recommendations
   };
