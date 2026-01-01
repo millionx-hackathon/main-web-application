@@ -1,13 +1,14 @@
 'use client';
 import { useState, useEffect, useRef } from 'react';
-import { Mic, MicOff, Phone, PhoneOff, Settings, Loader2, Volume2 } from 'lucide-react';
+import { Mic, MicOff, Phone, PhoneOff, Settings, Loader2, Volume2, Upload, FileText } from 'lucide-react';
+import Link from 'next/link';
 
 // Import Ultravox client (dynamic import for SSR compatibility)
 let UltravoxSession: any = null;
 
 export default function VoiceAgentPage() {
   const [status, setStatus] = useState<'idle' | 'connecting' | 'connected' | 'speaking' | 'listening'>('idle');
-  const [transcript, setTranscript] = useState<Array<{role: string, text: string}>>([]);
+  const [transcript, setTranscript] = useState<Array<{ role: string, text: string }>>([]);
   const [isMuted, setIsMuted] = useState(false);
   const [baseUrl, setBaseUrl] = useState('http://localhost:8080');
   const [showSettings, setShowSettings] = useState(false);
@@ -36,22 +37,35 @@ export default function VoiceAgentPage() {
       setError('Ultravox client not loaded. Please refresh the page.');
       return;
     }
-    
+
+    // Check if mediaDevices is available (requires HTTPS or localhost)
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+      setError('Microphone access requires HTTPS. Please access this page via HTTPS or localhost.');
+      return;
+    }
+
     setStatus('connecting');
     setError(null);
-    
+
     try {
+      // Request microphone permission first
+      try {
+        await navigator.mediaDevices.getUserMedia({ audio: true });
+      } catch (mediaErr) {
+        throw new Error('Microphone access denied. Please allow microphone access and try again.');
+      }
+
       // Get join URL from backend
       const res = await fetch(`${baseUrl}/api/voice/call`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ baseUrl: window.location.origin }),
       });
-      
+
       if (!res.ok) {
         throw new Error(`Failed to start call: ${res.statusText}`);
       }
-      
+
       const { joinUrl } = await res.json();
 
       // Create Ultravox session
@@ -60,24 +74,38 @@ export default function VoiceAgentPage() {
 
       // Listen for status changes
       session.addEventListener('status', (event: any) => {
-        const newStatus = event.status;
+        const newStatus = event?.status;
         if (newStatus === 'listening') setStatus('listening');
         else if (newStatus === 'speaking') setStatus('speaking');
         else if (newStatus === 'idle') setStatus('connected');
       });
 
-      // Listen for transcripts
+      // Listen for transcripts - handle different event structures
       session.addEventListener('transcripts', (event: any) => {
-        setTranscript(event.transcripts.map((t: any) => ({
-          role: t.speaker,
-          text: t.text
-        })));
+        const transcripts = event?.transcripts || event?.detail?.transcripts || [];
+        if (Array.isArray(transcripts)) {
+          setTranscript(transcripts.map((t: any) => ({
+            role: t.speaker || t.role || 'agent',
+            text: t.text || t.content || ''
+          })));
+        }
+      });
+
+      // Also listen for individual transcript updates
+      session.addEventListener('transcript', (event: any) => {
+        const t = event?.transcript || event?.detail || event;
+        if (t && t.text) {
+          setTranscript(prev => [...prev, {
+            role: t.speaker || t.role || 'agent',
+            text: t.text || t.content || ''
+          }]);
+        }
       });
 
       // Join the call
       await session.joinCall(joinUrl);
       setStatus('connected');
-      
+
     } catch (err: any) {
       console.error('Failed to start call:', err);
       setError(err.message || 'Failed to connect. Please check the base URL and try again.');
@@ -127,7 +155,7 @@ export default function VoiceAgentPage() {
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 via-indigo-50/30 to-purple-50/30 p-4 md:p-8">
       <div className="max-w-3xl mx-auto space-y-6">
-        
+
         {/* Header */}
         <div className="text-center space-y-3 mb-8">
           <div className="inline-flex p-4 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-xl shadow-indigo-200 mb-4">
@@ -137,6 +165,27 @@ export default function VoiceAgentPage() {
           <p className="text-gray-600 max-w-lg mx-auto">
             Real-time voice conversation with AI using Ultravox WebRTC
           </p>
+        </div>
+
+        {/* Navigation Links */}
+        <div className="flex justify-center gap-3 flex-wrap">
+          <div className="flex items-center gap-2 px-4 py-2 bg-indigo-100 border border-indigo-200 rounded-xl text-indigo-700 font-medium shadow-sm">
+            🎤 Voice Call (Current)
+          </div>
+          <Link
+            href="/dashboard/voice-agent/upload"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-blue-50 hover:border-blue-300 hover:text-blue-700 transition-all shadow-sm"
+          >
+            <Upload className="w-4 h-4" />
+            Upload Documents
+          </Link>
+          <Link
+            href="/dashboard/voice-agent/summaries"
+            className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-purple-50 hover:border-purple-300 hover:text-purple-700 transition-all shadow-sm"
+          >
+            <FileText className="w-4 h-4" />
+            View Summaries
+          </Link>
         </div>
 
         {/* Settings Panel */}
@@ -151,7 +200,7 @@ export default function VoiceAgentPage() {
             </div>
             <span className="text-sm text-gray-500">{showSettings ? '▲' : '▼'}</span>
           </button>
-          
+
           {showSettings && (
             <div className="p-4 pt-0 border-t border-gray-100">
               <label className="block">
@@ -192,22 +241,20 @@ export default function VoiceAgentPage() {
           {/* Background decoration */}
           <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-100 to-purple-100 rounded-full blur-3xl -mr-32 -mt-32 opacity-50" />
           <div className="absolute bottom-0 left-0 w-48 h-48 bg-gradient-to-tr from-emerald-100 to-teal-100 rounded-full blur-3xl -ml-24 -mb-24 opacity-50" />
-          
+
           <div className="relative z-10">
             {/* Voice Visualizer */}
             <div className="flex justify-center mb-8">
-              <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 ${
-                status === 'idle' ? 'bg-gray-100' :
+              <div className={`w-32 h-32 rounded-full flex items-center justify-center transition-all duration-500 ${status === 'idle' ? 'bg-gray-100' :
                 status === 'connecting' ? 'bg-amber-100 animate-pulse' :
-                status === 'listening' ? 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-200 scale-110' :
-                status === 'speaking' ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-200 scale-110' :
-                'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-200'
-              }`}>
-                <Mic className={`w-12 h-12 transition-all duration-300 ${
-                  status === 'idle' ? 'text-gray-400' :
+                  status === 'listening' ? 'bg-gradient-to-br from-emerald-400 to-teal-500 shadow-lg shadow-emerald-200 scale-110' :
+                    status === 'speaking' ? 'bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-200 scale-110' :
+                      'bg-gradient-to-br from-green-400 to-emerald-500 shadow-lg shadow-green-200'
+                }`}>
+                <Mic className={`w-12 h-12 transition-all duration-300 ${status === 'idle' ? 'text-gray-400' :
                   status === 'connecting' ? 'text-amber-600' :
-                  'text-white'
-                } ${status === 'speaking' ? 'animate-bounce' : ''}`} />
+                    'text-white'
+                  } ${status === 'speaking' ? 'animate-bounce' : ''}`} />
               </div>
             </div>
 
@@ -225,11 +272,10 @@ export default function VoiceAgentPage() {
                 <>
                   <button
                     onClick={toggleMute}
-                    className={`p-4 rounded-2xl transition-all duration-300 ${
-                      isMuted 
-                        ? 'bg-red-500 text-white shadow-lg shadow-red-200' 
-                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-                    }`}
+                    className={`p-4 rounded-2xl transition-all duration-300 ${isMuted
+                      ? 'bg-red-500 text-white shadow-lg shadow-red-200'
+                      : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                      }`}
                     title={isMuted ? 'Unmute' : 'Mute'}
                   >
                     {isMuted ? <MicOff className="w-6 h-6" /> : <Mic className="w-6 h-6" />}
@@ -247,7 +293,7 @@ export default function VoiceAgentPage() {
 
             {/* Transcript */}
             {transcript.length > 0 && (
-              <div 
+              <div
                 ref={transcriptRef}
                 className="border border-gray-200 rounded-2xl p-6 max-h-80 overflow-y-auto bg-gray-50/50"
               >
@@ -257,15 +303,14 @@ export default function VoiceAgentPage() {
                 </h2>
                 <div className="space-y-4">
                   {transcript.map((t, i) => (
-                    <div 
-                      key={i} 
+                    <div
+                      key={i}
                       className={`flex ${t.role === 'user' ? 'justify-end' : 'justify-start'}`}
                     >
-                      <div className={`max-w-[80%] p-4 rounded-2xl ${
-                        t.role === 'user' 
-                          ? 'bg-indigo-600 text-white rounded-br-md' 
-                          : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
-                      }`}>
+                      <div className={`max-w-[80%] p-4 rounded-2xl ${t.role === 'user'
+                        ? 'bg-indigo-600 text-white rounded-br-md'
+                        : 'bg-white border border-gray-200 text-gray-800 rounded-bl-md shadow-sm'
+                        }`}>
                         <p className="text-xs font-bold mb-1 opacity-70 uppercase tracking-wider">
                           {t.role === 'user' ? 'You' : 'AI'}
                         </p>

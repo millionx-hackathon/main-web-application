@@ -79,13 +79,13 @@ export default async function DashboardPage() {
           </p>
         </div>
         <div className="flex gap-3">
-            <button className="p-3 bg-white rounded-full border shadow-sm hover:bg-gray-50 relative">
-                <Bell className="w-5 h-5 text-gray-600"/>
-                <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
-            </button>
-            <div className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-200">
-                Class 9 • Science
-            </div>
+          <button className="p-3 bg-white rounded-full border shadow-sm hover:bg-gray-50 relative">
+            <Bell className="w-5 h-5 text-gray-600" />
+            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border border-white"></span>
+          </button>
+          <div className="bg-indigo-600 text-white px-5 py-3 rounded-xl font-semibold shadow-lg shadow-indigo-200">
+            Class 9 • Science
+          </div>
         </div>
       </div>
 
@@ -134,160 +134,160 @@ export default async function DashboardPage() {
       </div>
 
       <div className="grid lg:grid-cols-3 gap-8 h-full">
-         {/* Main Content Area - 2 Cols */}
-         <div className="lg:col-span-2 space-y-8">
-            {/* Quick Actions (Bangla) */}
-            <div>
-                <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Target className="w-5 h-5 text-indigo-600"/>
-                    কুইক অ্যাকশন
-                </h2>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <Link
-                    href="/dashboard/voice-ai"
-                    className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200 hover:shadow-2xl hover:scale-[1.02] transition-all group relative overflow-hidden"
-                >
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
-                    <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 backdrop-blur-sm">
-                        <Phone className="h-6 w-6 text-white" />
-                    </div>
-                    <h3 className="text-xl font-bold mb-2">
-                    AI শিক্ষকের সাথে কথা বলুন
-                    </h3>
-                    <p className="text-indigo-100 text-sm">
-                    সরাসরি কথা বলে যেকোনো টপিক বুঝে নিন।
-                    </p>
-                </Link>
-
-                <Link
-                    href="/dashboard/math-solver"
-                    className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
-                >
-                    <div className="h-12 w-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-200 transition-colors">
-                    <Calculator className="h-6 w-6 text-orange-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">
-                    গণিত সমাধান
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                    অংকের ছবি তুলে মুহূর্তেই সমাধান পান।
-                    </p>
-                </Link>
-
-                <Link
-                    href="/dashboard/practice"
-                    className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
-                >
-                    <div className="h-12 w-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
-                    <Target className="h-6 w-6 text-emerald-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">
-                    অনুশীলন করুন
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                    চ্যাপ্টার ভিত্তিক কুইজ এবং মডেল টেস্ট।
-                    </p>
-                </Link>
-
-                <Link
-                    href="/dashboard/book-reader"
-                    className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
-                >
-                    <div className="h-12 w-12 bg-pink-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-pink-200 transition-colors">
-                    <BookOpen className="h-6 w-6 text-pink-600" />
-                    </div>
-                    <h3 className="text-lg font-bold text-gray-900 mb-2">
-                    বই পড়ুন
-                    </h3>
-                    <p className="text-sm text-gray-600">
-                    NCTB বই এবং ইন্টারেক্টিভ রিডিং।
-                    </p>
-                </Link>
+        {/* Main Content Area - 2 Cols */}
+        <div className="lg:col-span-2 space-y-8">
+          {/* Quick Actions (Bangla) */}
+          <div>
+            <h2 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+              <Target className="w-5 h-5 text-indigo-600" />
+              কুইক অ্যাকশন
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <Link
+                href="/dashboard/voice-agent"
+                className="bg-indigo-600 rounded-2xl p-6 text-white shadow-xl shadow-indigo-200 hover:shadow-2xl hover:scale-[1.02] transition-all group relative overflow-hidden"
+              >
+                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-2xl"></div>
+                <div className="h-12 w-12 bg-white/20 rounded-xl flex items-center justify-center mb-4 backdrop-blur-sm">
+                  <Phone className="h-6 w-6 text-white" />
                 </div>
+                <h3 className="text-xl font-bold mb-2">
+                  AI শিক্ষক এর সাথে কথা বলুন
+                </h3>
+                <p className="text-indigo-100 text-sm">
+                  সরাসরি কথা বলে যেকোনো টপিক বুঝে নিন।
+                </p>
+              </Link>
+
+              <Link
+                href="/dashboard/math-solver"
+                className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
+              >
+                <div className="h-12 w-12 bg-orange-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-orange-200 transition-colors">
+                  <Calculator className="h-6 w-6 text-orange-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  গণিত সমাধান
+                </h3>
+                <p className="text-sm text-gray-600">
+                  অংকের ছবি তুলে মুহূর্তেই সমাধান পান।
+                </p>
+              </Link>
+
+              <Link
+                href="/dashboard/practice"
+                className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
+              >
+                <div className="h-12 w-12 bg-emerald-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-emerald-200 transition-colors">
+                  <Target className="h-6 w-6 text-emerald-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  অনুশীলন করুন
+                </h3>
+                <p className="text-sm text-gray-600">
+                  চ্যাপ্টার ভিত্তিক কুইজ এবং মডেল টেস্ট।
+                </p>
+              </Link>
+
+              <Link
+                href="/dashboard/book-reader"
+                className="bg-white rounded-2xl p-6 border border-gray-200 hover:border-indigo-300 hover:shadow-lg transition-all group"
+              >
+                <div className="h-12 w-12 bg-pink-100 rounded-xl flex items-center justify-center mb-4 group-hover:bg-pink-200 transition-colors">
+                  <BookOpen className="h-6 w-6 text-pink-600" />
+                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-2">
+                  বই পড়ুন
+                </h3>
+                <p className="text-sm text-gray-600">
+                  NCTB বই এবং ইন্টারেক্টিভ রিডিং।
+                </p>
+              </Link>
             </div>
+          </div>
 
-            {/* Study Plan Section */}
-            <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
-                <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-xl font-bold text-gray-900">আমার রুটিন</h2>
-                    <button className="text-sm text-indigo-600 font-semibold hover:underline">সব দেখুন</button>
-                </div>
-                <div className="space-y-4">
-                    {/* Hardcoded study items from previous context */}
-                    <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors cursor-pointer">
-                         <div className="w-2 h-12 bg-red-500 rounded-full mr-4"></div>
-                         <div className="flex-1">
-                             <div className="flex justify-between mb-1">
-                                <h4 className="font-bold text-gray-900">পদার্থবিজ্ঞান - ৩য় অধ্যায়</h4>
-                                <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold">High Priority</span>
-                             </div>
-                             <p className="text-sm text-gray-600">নিউটনের ৩য় সূত্র, ভরবেগ ও ঘর্ষণ বল</p>
-                         </div>
-                         <button className="ml-4 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-100">শুরু করুন</button>
-                    </div>
-
-                    <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors cursor-pointer">
-                         <div className="w-2 h-12 bg-yellow-500 rounded-full mr-4"></div>
-                         <div className="flex-1">
-                             <div className="flex justify-between mb-1">
-                                <h4 className="font-bold text-gray-900">রসায়ন - ৪র্থ অধ্যায়</h4>
-                                <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-bold">Medium</span>
-                             </div>
-                             <p className="text-sm text-gray-600">পর্যায় সারণি: মৌলের পর্যায়বৃত্ত ধর্ম</p>
-                         </div>
-                         <button className="ml-4 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-100">শুরু করুন</button>
-                    </div>
-                </div>
+          {/* Study Plan Section */}
+          <div className="bg-white rounded-2xl border border-gray-200 p-6 md:p-8">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">আমার রুটিন</h2>
+              <button className="text-sm text-indigo-600 font-semibold hover:underline">সব দেখুন</button>
             </div>
-         </div>
-
-         {/* Sidebar / Extra Info - 1 Col */}
-         <div className="space-y-8">
-             {/* Recent Activity */}
-             <div className="bg-white rounded-2xl p-6 border border-gray-200">
-                <h2 className="text-xl font-bold text-gray-900 mb-6">সাম্প্রতিক অ্যাক্টিভিটি</h2>
-                <div className="space-y-6">
-                    {recentActivities.map((activity) => {
-                        const Icon = activity.icon;
-                        return (
-                            <div key={activity.id} className="flex gap-4 p-2 hover:bg-gray-50 rounded-xl transition-colors">
-                                <div className={`h-10 w-10 ${activity.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
-                                    <Icon className="h-5 w-5" />
-                                </div>
-                                <div>
-                                    <p className="text-sm font-bold text-gray-900 mb-0.5">{activity.title}</p>
-                                    <div className="flex items-center gap-3 text-xs text-gray-500">
-                                        <span>{activity.time}</span>
-                                        <span className="w-1 h-1 rounded-full bg-gray-300"></span>
-                                        <span className="font-medium text-gray-700">{activity.score}</span>
-                                    </div>
-                                </div>
-                            </div>
-                        );
-                    })}
+            <div className="space-y-4">
+              {/* Hardcoded study items from previous context */}
+              <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors cursor-pointer">
+                <div className="w-2 h-12 bg-red-500 rounded-full mr-4"></div>
+                <div className="flex-1">
+                  <div className="flex justify-between mb-1">
+                    <h4 className="font-bold text-gray-900">পদার্থবিজ্ঞান - ৩য় অধ্যায়</h4>
+                    <span className="text-xs bg-red-100 text-red-600 px-2 py-0.5 rounded font-bold">High Priority</span>
+                  </div>
+                  <p className="text-sm text-gray-600">নিউটনের ৩য় সূত্র, ভরবেগ ও ঘর্ষণ বল</p>
                 </div>
-             </div>
+                <button className="ml-4 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-100">শুরু করুন</button>
+              </div>
 
-             {/* Upcoming Tasks */}
-             <div className="bg-indigo-900 rounded-2xl p-6 text-white relative overflow-hidden">
-                <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
-                <h2 className="text-lg font-bold mb-4 relative z-10">আগামী ইভেন্টসমূহ</h2>
-                <div className="space-y-4 relative z-10">
-                    {upcomingTasks.map((task) => (
-                        <div key={task.id} className="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
-                            <p className="font-semibold text-sm mb-1">{task.title}</p>
-                            <div className="flex items-center gap-2 text-xs text-indigo-200">
-                                <Clock className="w-3 h-3" />
-                                {task.deadline}
-                            </div>
-                        </div>
-                    ))}
+              <div className="flex items-center p-4 bg-gray-50 rounded-xl border border-gray-100 hover:border-indigo-200 transition-colors cursor-pointer">
+                <div className="w-2 h-12 bg-yellow-500 rounded-full mr-4"></div>
+                <div className="flex-1">
+                  <div className="flex justify-between mb-1">
+                    <h4 className="font-bold text-gray-900">রসায়ন - ৪র্থ অধ্যায়</h4>
+                    <span className="text-xs bg-yellow-100 text-yellow-700 px-2 py-0.5 rounded font-bold">Medium</span>
+                  </div>
+                  <p className="text-sm text-gray-600">পর্যায় সারণি: মৌলের পর্যায়বৃত্ত ধর্ম</p>
                 </div>
-                <button className="mt-6 w-full py-2 bg-white text-indigo-900 rounded-lg text-sm font-bold hover:bg-indigo-50 transition-colors relative z-10">
-                     ক্যালেন্ডার দেখুন
-                </button>
-             </div>
-         </div>
+                <button className="ml-4 px-4 py-2 bg-white border border-gray-200 rounded-lg text-sm font-semibold hover:bg-gray-100">শুরু করুন</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Sidebar / Extra Info - 1 Col */}
+        <div className="space-y-8">
+          {/* Recent Activity */}
+          <div className="bg-white rounded-2xl p-6 border border-gray-200">
+            <h2 className="text-xl font-bold text-gray-900 mb-6">সাম্প্রতিক অ্যাক্টিভিটি</h2>
+            <div className="space-y-6">
+              {recentActivities.map((activity) => {
+                const Icon = activity.icon;
+                return (
+                  <div key={activity.id} className="flex gap-4 p-2 hover:bg-gray-50 rounded-xl transition-colors">
+                    <div className={`h-10 w-10 ${activity.color} rounded-lg flex items-center justify-center flex-shrink-0`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 mb-0.5">{activity.title}</p>
+                      <div className="flex items-center gap-3 text-xs text-gray-500">
+                        <span>{activity.time}</span>
+                        <span className="w-1 h-1 rounded-full bg-gray-300"></span>
+                        <span className="font-medium text-gray-700">{activity.score}</span>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Upcoming Tasks */}
+          <div className="bg-indigo-900 rounded-2xl p-6 text-white relative overflow-hidden">
+            <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-10 -mt-10 blur-xl"></div>
+            <h2 className="text-lg font-bold mb-4 relative z-10">আগামী ইভেন্টসমূহ</h2>
+            <div className="space-y-4 relative z-10">
+              {upcomingTasks.map((task) => (
+                <div key={task.id} className="bg-white/10 p-3 rounded-xl backdrop-blur-sm border border-white/10">
+                  <p className="font-semibold text-sm mb-1">{task.title}</p>
+                  <div className="flex items-center gap-2 text-xs text-indigo-200">
+                    <Clock className="w-3 h-3" />
+                    {task.deadline}
+                  </div>
+                </div>
+              ))}
+            </div>
+            <button className="mt-6 w-full py-2 bg-white text-indigo-900 rounded-lg text-sm font-bold hover:bg-indigo-50 transition-colors relative z-10">
+              ক্যালেন্ডার দেখুন
+            </button>
+          </div>
+        </div>
       </div>
     </div>
   );

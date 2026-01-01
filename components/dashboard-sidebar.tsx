@@ -23,6 +23,7 @@ import {
   Menu,
   PanelLeft,
   Headphones,
+  Mic,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -43,6 +44,11 @@ const navigationItems: NavItem[] = [
     title: "AI শিক্ষক",
     href: "/dashboard/voice-ai",
     icon: Phone,
+  },
+  {
+    title: "Voice Agent",
+    href: "/dashboard/voice-agent",
+    icon: Mic,
   },
   {
     title: "গণিত সমাধান",
@@ -293,7 +299,7 @@ export function DashboardSidebar() {
               className={cn(
                 "flex items-center px-3 py-2 text-sm font-medium text-gray-700 rounded-lg hover:bg-gray-100 transition-colors",
                 pathname === "/dashboard/settings" &&
-                  "bg-blue-50 text-blue-600",
+                "bg-blue-50 text-blue-600",
                 isCollapsed && "justify-center"
               )}
               title={isCollapsed ? "Settings" : undefined}
